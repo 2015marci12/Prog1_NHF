@@ -1,6 +1,47 @@
 #include "Graphics.h"
 
-GLBuffer* GLBuffer_Create(size_t size, GLBufferFlags flags, const void* Init_Data) 
+void GLAPIENTRY
+MessageCallback(GLenum source,
+	GLenum type,
+	GLuint id,
+	GLenum severity,
+	GLsizei length,
+	const GLchar* message,
+	const void* userParam)
+{
+	switch (severity)
+	{
+	case GL_DEBUG_SEVERITY_NOTIFICATION:
+		TRACE("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
+			type, severity, message);
+		break;
+	case GL_DEBUG_SEVERITY_LOW:
+		INFO("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
+			type, severity, message);
+		break;
+	case GL_DEBUG_SEVERITY_MEDIUM:
+		WARN("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
+			type, severity, message);
+		break;
+	case GL_DEBUG_SEVERITY_HIGH:
+	default:
+		ERROR("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
+			type, severity, message);
+		break;
+	}
+}
+
+void GLEnableDebugOutput()
+{
+	glEnable(GL_DEBUG_OUTPUT);
+	glDebugMessageCallback(MessageCallback, 0);
+}
+
+GLBuffer* GLBuffer_Create(size_t size, GLBufferFlags flags, const void* Init_Data)
 {
 	//Create gl object.
 	uint32_t buffer;

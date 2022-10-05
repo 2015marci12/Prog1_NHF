@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+void GLEnableDebugOutput();
+
 /*
 *	Buffer
 */

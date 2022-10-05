@@ -8,20 +8,6 @@
 #include <stdio.h>
 
 
-void GLAPIENTRY
-MessageCallback(GLenum source,
-    GLenum type,
-    GLuint id,
-    GLenum severity,
-    GLsizei length,
-    const GLchar* message,
-    const void* userParam)
-{
-    fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-        (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-        type, severity, message);
-}
-
 int main(int argc, char* argv[])
 {
 
@@ -47,8 +33,7 @@ int main(int argc, char* argv[])
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
     if(!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) exit(-1);
 
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(MessageCallback, 0);
+    GLEnableDebugOutput();
 
     glViewport(0, 0, 440, 360);
 

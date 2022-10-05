@@ -18,10 +18,10 @@
 #define VA_ARGS(...) , ##__VA_ARGS__
 
 #define TRACE_STR(str) str
-#define	INFO_STR(str) "\x1B[32m" str "\033[0m"
-#define	WARN_STR(str) "\x1B[93m" str "\033[0m"
-#define	ERROR_STR(str) "\x1B[91m" str "\033[0m"
-#define	FATAL_STR(str) "\x1B[37,101m" str "\033[0m"
+#define	INFO_STR(str) "\x1b[32m" str "\x1b[0m"
+#define	WARN_STR(str) "\x1b[93m" str "\x1b[0m"
+#define	ERROR_STR(str) "\x1b[91m" str "\x1b[0m"
+#define	FATAL_STR(str) "\x1b[37;41m" str "\x1b[0m"
 
 #ifndef NO_LOG
 #	define TRACE(format, ...) printf(TRACE_STR(format) VA_ARGS(__VA_ARGS__))
