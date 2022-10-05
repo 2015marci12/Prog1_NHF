@@ -25,6 +25,7 @@
   <ItemGroup>
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />
+    <ClInclude Include="debugmalloc.h" />
     <ClInclude Include="GL\Buffer.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />

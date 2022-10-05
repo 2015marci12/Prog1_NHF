@@ -84,6 +84,10 @@ int main(int argc, char* argv[])
 
     SDL_GL_SwapWindow(window);
 
+    GLBuffer_Destroy(vbo);
+    GLVertexArray_Destroy(vao);
+    GLShader_Destroy(shader);
+
     /* varunk a kilepesre */
     SDL_Event ev;
     while (SDL_WaitEvent(&ev) && ev.type != SDL_QUIT) {
