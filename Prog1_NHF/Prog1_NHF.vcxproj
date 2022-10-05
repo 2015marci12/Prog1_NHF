@@ -28,6 +28,7 @@
     <ClInclude Include="GL\Buffer.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
