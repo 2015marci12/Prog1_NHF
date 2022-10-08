@@ -24,6 +24,12 @@
     <ClCompile Include="Graphics.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Container.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PoolAllocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -49,6 +55,9 @@
     </ClInclude>
     <ClInclude Include="debugmalloc.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoolAllocator.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

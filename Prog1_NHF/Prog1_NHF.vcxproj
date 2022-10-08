@@ -19,8 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Container.c" />
     <ClCompile Include="Graphics.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="PoolAllocator.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h" />
@@ -31,6 +33,7 @@
     <ClInclude Include="Container.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
+    <ClInclude Include="PoolAllocator.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

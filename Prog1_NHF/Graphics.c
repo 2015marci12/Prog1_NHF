@@ -154,7 +154,7 @@ GLShader* GLShader_Create(const shaderSource_t* sources, size_t source_count)
 		shaders[i] = glCreateShader(sources[i].type);
 
 		//Upload source.
-		size_t length = strlen(sources[i].source);
+		uint32_t length = (uint32_t)strlen(sources[i].source);
 		glShaderSource(shaders[i], 1, &sources[i].source, &length);
 
 		//Compile.
@@ -168,7 +168,7 @@ GLShader* GLShader_Create(const shaderSource_t* sources, size_t source_count)
 			noErrors = false;
 
 			char buff[4096] = { '\0' };
-			size_t len = 0;
+			uint32_t len = 0;
 			glGetShaderInfoLog(shaders[i], 4096, &len, buff);
 			ERROR("Shader compilation error: %s\n", buff);
 		}
@@ -189,7 +189,7 @@ GLShader* GLShader_Create(const shaderSource_t* sources, size_t source_count)
 			noErrors = false;
 
 			char buff[4096] = { '\0' };
-			size_t len = 0;
+			uint32_t len = 0;
 			glGetProgramInfoLog(program, 4096, &len, buff);
 			ERROR("Shader Link error: %s\n", buff);
 		}
@@ -225,42 +225,42 @@ void GLShader_Uniform1fv(GLShader* ptr, int loc, size_t count, const float* val)
 {
 	if (!ptr) return;
 
-	glProgramUniform1fv(ptr->_Priv.NativeHandle, loc, count, val);
+	glProgramUniform1fv(ptr->_Priv.NativeHandle, loc, (GLsizei)count, val);
 }
 
 void GLShader_Uniform2fv(GLShader* ptr, int loc, size_t count, const vec2* val)
 {
 	if (!ptr) return;
 
-	glProgramUniform2fv(ptr->_Priv.NativeHandle, loc, count, (float*)val);
+	glProgramUniform2fv(ptr->_Priv.NativeHandle, loc, (GLsizei)count, (float*)val);
 }
 
 void GLShader_Uniform3fv(GLShader* ptr, int loc, size_t count, const vec3* val)
 {
 	if (!ptr) return;
 
-	glProgramUniform3fv(ptr->_Priv.NativeHandle, loc, count, (float*)val);
+	glProgramUniform3fv(ptr->_Priv.NativeHandle, loc, (GLsizei)count, (float*)val);
 }
 
 void GLShader_Uniform4fv(GLShader* ptr, int loc, size_t count, const vec4* val)
 {
 	if (!ptr) return;
 
-	glProgramUniform4fv(ptr->_Priv.NativeHandle, loc, count, (float*)val);
+	glProgramUniform4fv(ptr->_Priv.NativeHandle, loc, (GLsizei)count, (float*)val);
 }
 
 void GLShader_UniformMat3fv(GLShader* ptr, int loc, size_t count, const mat3* val)
 {
 	if (!ptr) return;
 
-	glProgramUniformMatrix3fv(ptr->_Priv.NativeHandle, loc, count, GL_FALSE, (float*)val);
+	glProgramUniformMatrix3fv(ptr->_Priv.NativeHandle, loc, (GLsizei)count, GL_FALSE, (float*)val);
 }
 
 void GLShader_UniformMat4fv(GLShader* ptr, int loc, size_t count, const mat4* val)
 {
 	if (!ptr) return;
 
-	glProgramUniformMatrix4fv(ptr->_Priv.NativeHandle, loc, count, GL_FALSE, (float*)val);
+	glProgramUniformMatrix4fv(ptr->_Priv.NativeHandle, loc, (GLsizei)count, GL_FALSE, (float*)val);
 }
 
 void GLShader_Bind(GLShader* ptr)
@@ -291,16 +291,16 @@ GLVertexArray* GLVertexArray_Create(const vertexAttribute_t* attribs, size_t att
 			case GLDataType_USHORT	  :
 			case GLDataType_INT		  :
 			case GLDataType_UINT	  :
-				if (attribs[i].normalize) glVertexArrayAttribFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, GL_TRUE, attribs[i].offset);
-				else glVertexArrayAttribIFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, attribs[i].offset);
+				if (attribs[i].normalize) glVertexArrayAttribFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, GL_TRUE, (GLuint)attribs[i].offset);
+				else glVertexArrayAttribIFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, (GLuint)attribs[i].offset);
 				glVertexArrayAttribBinding(vao, attribs[i].attribute, attribs[i].bindingIndex);
 				break;
 			case GLDataType_HALF_FLOAT:
 			case GLDataType_FLOAT	  :
-				glVertexArrayAttribFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, attribs[i].normalize, attribs[i].offset);
+				glVertexArrayAttribFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, attribs[i].normalize, (GLuint)attribs[i].offset);
 				break;
 			case GLDataType_DOUBLE	  :
-				glVertexArrayAttribLFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, attribs[i].normalize, attribs[i].offset);
+				glVertexArrayAttribLFormat(vao, attribs[i].attribute, attribs[i].size, attribs[i].type, (GLuint)attribs[i].offset);
 				break;
 		default:
 			break;
@@ -334,5 +334,5 @@ void GLVertexArray_BindBuffer(GLVertexArray* ptr, uint32_t binding, GLBuffer* bu
 	if (!ptr) return;
 
 	glVertexArrayBindingDivisor(ptr->_Priv.NativeHandle, binding, divisor);
-	glVertexArrayVertexBuffer(ptr->_Priv.NativeHandle, binding, (buffer) ? buffer->_Priv.NativeHandle : 0, offset, stride);
+	glVertexArrayVertexBuffer(ptr->_Priv.NativeHandle, binding, (buffer) ? buffer->_Priv.NativeHandle : 0, offset, (GLsizei)stride);
 }
