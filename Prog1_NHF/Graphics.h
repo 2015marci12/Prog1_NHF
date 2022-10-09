@@ -143,3 +143,11 @@ void GLVertexArray_Destroy(GLVertexArray* ptr);
 
 void GLVertexArray_Bind(GLVertexArray* ptr);
 void GLVertexArray_BindBuffer(GLVertexArray* ptr, uint32_t binding, GLBuffer* buffer, ptrdiff_t offset, size_t stride, GLAttribDiv divisor);
+
+typedef struct GLTexture 
+{
+	struct
+	{
+		const uint32_t NativeHandle;
+	} _Priv;
+} GLTexture;

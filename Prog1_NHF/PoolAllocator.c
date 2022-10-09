@@ -34,7 +34,7 @@ void* Pool_Allocate(PoolAllocator_t* allocator)
 	}
 	//Allocate new block.
 	size_t size = 1024;
-	if (allocator->blocks) size = allocator->blocks->size;
+	if (allocator->blocks) size = allocator->blocks->size * 2;
 	PoolBlock_t* newblock = Pool_newBlock(allocator->elem_size, size, &allocator->freelist);
 	if (!newblock)
 	{

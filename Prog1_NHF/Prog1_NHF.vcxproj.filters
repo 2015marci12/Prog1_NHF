@@ -30,6 +30,9 @@
     <ClCompile Include="PoolAllocator.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ECS.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -57,6 +60,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="PoolAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ECS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

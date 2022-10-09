@@ -2,16 +2,12 @@
 #include "Mathcell.h"
 #include "Graphics.h"
 #include "Container.h"
+#include "ECS.h"
 
 #define SDL_MAIN_HANDLED
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
-
-int keysTest[60] =
-{
-    39, 45, 69, 83, 89, 93, 153, 172, 214, 222, 248, 257, 258, 265, 266, 273, 312, 314, 331, 334, 336, 392, 428, 447, 450, 462, 506, 527, 529, 531, 565, 575, 578, 598, 615, 622, 627, 628, 669, 693, 764, 770, 778, 792, 796, 801, 822, 835, 845, 866, 887, 889, 907, 909, 938, 942, 945, 960, 965, 993
-};
 
 int main(int argc, char* argv[])
 {
@@ -32,21 +28,6 @@ int main(int argc, char* argv[])
     {
         SDL_Log("Nem hozhato letre az ablak: %s", SDL_GetError());
         exit(1);
-    }
-
-    TreeNode_t* root = NULL;
-    for (int i = 0; i < 60; i++) 
-    {
-        root = Tree_Insert(root, keysTest[i], keysTest[i]);
-        int height;
-        ASSERT(Tree_TestCheckCachedHeights(root, &height), "Tree heights invalid!");
-    }
-
-    for(int i = 0; i < 60; i++) 
-    {
-        root = Tree_Remove(root, keysTest[i]);
-        int height;
-        ASSERT(Tree_TestCheckCachedHeights(root, &height), "Tree heights invalid!");
     }
     
     //Init gl
