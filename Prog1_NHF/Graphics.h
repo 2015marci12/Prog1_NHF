@@ -144,10 +144,39 @@ void GLVertexArray_Destroy(GLVertexArray* ptr);
 void GLVertexArray_Bind(GLVertexArray* ptr);
 void GLVertexArray_BindBuffer(GLVertexArray* ptr, uint32_t binding, GLBuffer* buffer, ptrdiff_t offset, size_t stride, GLAttribDiv divisor);
 
+typedef enum GLFormat
+{
+	GLFormat_NONE = 0,
+	GLFormat_RGBA = GL_RGBA,
+	GLFormat_BGRA = GL_BGRA,
+	GLFormat_RGB = GL_RGB,
+	GLFormat_R32UI = GL_R32UI,
+	GLFormat_R32F = GL_R32F,
+	GLFormat_RGBA32F = GL_RGBA32F,
+	GLFormat_RGB32F = GL_RGB32F,
+} GLFormat;
+
+typedef enum GLTextureType 
+{
+	GLTextureType_1D = GL_TEXTURE_1D,
+	GLTextureType_2D = GL_TEXTURE_2D,
+	GLTextureType_3D = GL_TEXTURE_3D,
+	GLTextureType_Cube = GL_TEXTURE_CUBE_MAP,
+} GLTextureType;
+
 typedef struct GLTexture 
 {
+	const GLTextureType Type;
+	const GLFormat Format;
+	const uvec3 Size;
 	struct
 	{
 		const uint32_t NativeHandle;
 	} _Priv;
 } GLTexture;
+
+GLTexture* GLTexture_Create(GLTextureType type, GLFormat format, uvec3 size, uint32_t levels);
+void GLTexture_Destroy(GLTexture* ptr);
+
+void GLTexture_Upload(GLTexture* ptr, uint32_t level, GLFormat pixelFormat, uvec3 offset, uvec3 size, const void* data);
+void GLTexture_BindUnit(GLTexture* ptr, uint32_t unit);

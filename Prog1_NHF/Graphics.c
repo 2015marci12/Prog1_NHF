@@ -336,3 +336,69 @@ void GLVertexArray_BindBuffer(GLVertexArray* ptr, uint32_t binding, GLBuffer* bu
 	glVertexArrayBindingDivisor(ptr->_Priv.NativeHandle, binding, divisor);
 	glVertexArrayVertexBuffer(ptr->_Priv.NativeHandle, binding, (buffer) ? buffer->_Priv.NativeHandle : 0, offset, (GLsizei)stride);
 }
+
+GLTexture* GLTexture_Create(GLTextureType type, GLFormat format, uvec3 size, uint32_t levels)
+{
+	uint32_t tex = 0;
+	glCreateTextures(type, 1, &tex);
+	switch (type)
+	{
+	case GLTextureType_1D: glTextureStorage1D(tex, levels, format, size.x); break;
+	case GLTextureType_2D: glTextureStorage2D(tex, levels, format, size.x, size.y); break;
+	case GLTextureType_3D: glTextureStorage3D(tex, levels, format, size.x, size.y, size.z); break;
+	case GLTextureType_Cube: glTextureStorage2D(tex, levels, format, size.x, size.y); break;
+	default:
+		break;
+	}
+	GLTexture temp = { type, format, size,{ tex } };
+	GLTexture* ret = malloc(sizeof(GLTexture));
+	memcpy(ret, &temp, sizeof(GLTexture));
+	return ret;
+}
+
+void GLTexture_Destroy(GLTexture* ptr)
+{
+	if (!ptr) return;
+	glDeleteTextures(1, &ptr->_Priv.NativeHandle);
+	free(ptr);
+}
+
+void GLTexture_Upload(GLTexture* ptr, uint32_t level, GLFormat pixelFormat, uvec3 offset, uvec3 size, const void* data)
+{
+	if (!ptr) return;
+	GLenum type = 0;
+	GLenum format = 0;
+	switch (pixelFormat)
+	{
+	case GLFormat_RGBA:		type = GL_UNSIGNED_BYTE; format = GL_RGBA; break;
+	case GLFormat_BGRA: 	type = GL_UNSIGNED_BYTE; format = GL_BGRA; break;
+	case GLFormat_RGB:		type = GL_UNSIGNED_BYTE; format = GL_RGB; break;
+	case GLFormat_R32UI:	type = GL_UNSIGNED_INT; format = GL_R; break;
+	case GLFormat_R32F:		type = GL_FLOAT; format = GL_R; break;
+	case GLFormat_RGBA32F:	type = GL_FLOAT; format = GL_RGBA; break;
+	case GLFormat_RGB32F:	type = GL_FLOAT; format = GL_RGB; break;
+	case GLFormat_NONE:
+	default:
+		break;
+	}
+
+	switch (ptr->Type)
+	{
+	case GLTextureType_1D:
+		glTextureSubImage1D(ptr->_Priv.NativeHandle, level, offset.x, size.x, format, type, data); break;
+	case GLTextureType_2D:
+		glTextureSubImage2D(ptr->_Priv.NativeHandle, level, offset.x, offset.y, size.x, size.y, format, type, data); break;
+	case GLTextureType_3D:
+		glTextureSubImage3D(ptr->_Priv.NativeHandle, level, offset.x, offset.y, offset.z, size.x, size.y, size.z, format, type, data); break;
+	case GLTextureType_Cube:
+		glTextureSubImage2D(ptr->_Priv.NativeHandle, level, offset.x, offset.y, size.x, size.y, format, type, data); break;
+	default:
+		break;
+	}
+}
+
+void GLTexture_BindUnit(GLTexture* ptr, uint32_t unit)
+{
+	if (!ptr) return;
+	glBindTextures(unit, 1, &ptr->_Priv.NativeHandle);
+}
