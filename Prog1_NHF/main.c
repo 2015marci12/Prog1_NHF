@@ -9,6 +9,17 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
+enum ComponentTypes
+{
+    Component_NONE = 0,
+    Component_TRANSFORM = 1,
+};
+
+typedef struct Transform 
+{
+    mat4 transform;
+} Transform;
+
 int main(int argc, char* argv[])
 {
 
@@ -35,6 +46,28 @@ int main(int argc, char* argv[])
     if(!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) exit(-1);
 
     GLEnableDebugOutput();
+
+    Scene_t* scene = Scene_New();
+    ComponentInfo_t transformInfo = COMPONENT_DEF(Component_TRANSFORM, Transform);
+    Scene_AddComponentType(scene, transformInfo);
+
+    for (int i = 0; i < 100; i++) 
+    {
+        entity_t e = Scene_CreateEntity(scene);
+        Transform* tr = Scene_AddComponent(scene, e, Component_TRANSFORM);
+        mat4 t;
+        for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) t.col[i].comp[j] = !!j == i;
+        tr->transform = t;
+
+        ASSERT(tr == Scene_Get(scene, e, Component_TRANSFORM));
+    }
+    TRACE("%s\n", Scene_GetStorage(scene, Component_TRANSFORM)->comp.name);
+    for (View_t v = View_Create(scene, 1, Component_TRANSFORM); !View_End(&v); View_Next(&v)) 
+    {
+        Transform* tr = View_GetComponent(&v, 0);
+        ASSERT(tr);
+    }
+    Scene_Delete(scene);
 
     glViewport(0, 0, 440, 360);
 

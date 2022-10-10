@@ -16,6 +16,7 @@
 
 
 #define VA_ARGS(...) , ##__VA_ARGS__
+#define VA_EXCEPT_FIRST(first, ...) first, __VA_ARGS__
 
 #define TRACE_STR(str) str
 #define	INFO_STR(str) "\x1b[32m" str "\x1b[0m"
@@ -29,12 +30,12 @@
 #	define WARN(format, ...) printf(WARN_STR(format) VA_ARGS(__VA_ARGS__))
 #	define ERROR(format, ...) fprintf(stderr, ERROR_STR(format) VA_ARGS(__VA_ARGS__))
 #	define FATAL(format, ...) fprintf(stderr, FATAL_STR(format) VA_ARGS(__VA_ARGS__))
-#	define ASSERT(condition, ...) if(!condition) { FATAL(__VA_ARGS__); DEBUG_BREAK(); }
+#	define ASSERT(condition, format, ...) if(!(condition)) { FATAL(format, __VA_ARGS__); DEBUG_BREAK(); }
 #else
 #	define TRACE(format, ...)
 #	define INFO(format, ...) 
 #	define WARN(format, ...) 
 #	define ERROR(format, ...)
 #	define FATAL(format, ...)
-#	define ASSERT(condition, ...)
+#	define ASSERT(condition, format, ...)
 #endif
