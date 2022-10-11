@@ -130,6 +130,13 @@ typedef struct vertexAttribute_t
 	ptrdiff_t offset;
 } vertexAttribute_t;
 
+vertexAttribute_t vertexAttribute(uint32_t bindingIndex,
+	uint32_t attribute,
+	GLDataType type,
+	uint32_t size,
+	bool normalize,
+	ptrdiff_t offset);
+
 typedef struct GLVertexArray 
 {
 	struct

@@ -24,6 +24,7 @@
     <ClCompile Include="Graphics.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="PoolAllocator.c" />
+    <ClCompile Include="Renderer2D.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
     <ClInclude Include="PoolAllocator.h" />
+    <ClInclude Include="Renderer2D.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

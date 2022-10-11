@@ -3,6 +3,7 @@
 #include "Graphics.h"
 #include "Container.h"
 #include "ECS.h"
+#include "Renderer2D.h"
 
 #define SDL_MAIN_HANDLED
 
@@ -113,6 +114,10 @@ int main(int argc, char* argv[])
     };
     GLShader* shader = GLShader_Create(sources, 2);
     GLShader_Bind(shader);
+
+    Renderer2D renderer;
+    Renderer2D_Init(&renderer);
+    Renderer2D_Destroy(&renderer);
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
 

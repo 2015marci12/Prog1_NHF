@@ -22,32 +22,54 @@
     static scal_t prefix ## vec ## compNum ## _Len(vec_t a) { scal_t lensqr = 0; for(int i = 0; i < compNum; i++) lensqr += a.comp[i] * a.comp[i]; return (scal_t)sqrt(lensqr); } \
     static scal_t prefix ## vec ## compNum ## _Sum(vec_t a) { scal_t sum = 0; for(int i = 0; i < compNum; i++) sum += a.comp[i]; return sum; } \
     static scal_t prefix ## vec ## compNum ## _Dot(vec_t a, vec_t b) { return prefix ## vec ## compNum ## _Sum(prefix ## vec ## compNum ## _Mul(a, b)); }
+
 //Vector definitions for different types.
 #define vecTypes(prefix, scal_t)        \
 typedef union prefix ## vec2            \
 {                                       \
     struct { scal_t x, y; };            \
     struct { scal_t r, g; };            \
-    scal_t comp[2];               \
+    scal_t comp[2];                     \
 } prefix ## vec2;                       \
                                         \
 typedef union prefix ## vec3            \
 {                                       \
     struct { scal_t x, y, z; };         \
     struct { scal_t r, g, b; };         \
-    scal_t comp[3];               \
+    scal_t comp[3];                     \
 } prefix ## vec3;                       \
                                         \
 typedef union prefix ## vec4            \
 {                                       \
     struct { scal_t x, y, z, w; };      \
     struct { scal_t r, g, b, a; };      \
-    scal_t comp[4];               \
+    scal_t comp[4];                     \
 } prefix ## vec4;                       \
                                         \
-static prefix ## vec2 new_ ## prefix ## vec2(scal_t x, scal_t y) { prefix ## vec2 vec; vec.x = x; vec.y = y; return vec; } \
-static prefix ## vec3 new_ ## prefix ## vec3(scal_t x, scal_t y, scal_t z) { prefix ## vec3 vec; vec.x = x; vec.y = y; vec.z = z; return vec; } \
-static prefix ## vec4 new_ ## prefix ## vec4(scal_t x, scal_t y, scal_t z, scal_t w) { prefix ## vec4 vec; vec.x = x; vec.y = y; vec.z = z; vec.w = w; return vec; } \
+static prefix ## vec2 new_ ## prefix ## vec2(scal_t x, scal_t y) \
+{ \
+    prefix ## vec2 vec; \
+    vec.x = x; \
+    vec.y = y; \
+    return vec; \
+} \
+static prefix ## vec3 new_ ## prefix ## vec3(scal_t x, scal_t y, scal_t z) \
+{ \
+    prefix ## vec3 vec; \
+    vec.x = x; \
+    vec.y = y; \
+    vec.z = z; \
+    return vec; \
+} \
+static prefix ## vec4 new_ ## prefix ## vec4(scal_t x, scal_t y, scal_t z, scal_t w) \
+{ \
+    prefix ## vec4 vec; \
+    vec.x = x; \
+    vec.y = y; \
+    vec.z = z; \
+    vec.w = w; \
+    return vec; \
+} \
                                         \
 vecOps(prefix, prefix ## vec2, scal_t, 2)      \
 vecOps(prefix, prefix ## vec3, scal_t, 3)      \
@@ -63,19 +85,62 @@ vecTypes(i, int32_t)
 vecTypes(u, uint32_t)
 
 //Matrix operations.
-#define matOps(prefix, cols, rows, mat_t, scal_t)   \
-static mat_t prefix ## mat ## cols ## x ## rows ## _Add(mat_t a, mat_t b) { for(int x = 0; x < cols; x++) for(int y = 0; y < rows; y++) a.col[x].comp[y] += b.col[x].comp[y]; return a; }  \
-static mat_t prefix ## mat ## cols ## x ## rows ## _Mul_s(mat_t a, scal_t b) { for(int x = 0; x < cols; x++) for(int y = 0; y < rows; y++) a.col[x].comp[y] *= b; return a; }  \
-static mat_t prefix ## mat ## cols ## x ## rows ## _s_Mul(scal_t b, mat_t a) { for(int x = 0; x < cols; x++) for(int y = 0; y < rows; y++) a.col[x].comp[y] *= b; return a; }  \
-static prefix ## vec ## cols prefix ## mat ## cols ## x ## rows ## _Mul_v(mat_t a, prefix ## vec ## rows b) { prefix ## vec ## cols ret; for(int x = 0; x < cols; x++) { ret.comp[x] = 0; for(int y = 0; y < rows; y++) ret.comp[x] += a.col[x].comp[y] * b.comp[y]; } return ret; }  \
-static prefix ## mat ## rows ## x ## cols prefix ## mat ## cols ## x ## rows ## _Transpose(mat_t a) { prefix ## mat ## rows ## x ## cols ret; for(int x = 0; x < cols; x++) for(int y = 0; y < rows; y++) ret.col[y].comp[x] = a.col[x].comp[y]; return ret; }
+#define matOps(prefix, cols, rows, mat_t, scal_t) \
+static mat_t prefix ## mat ## cols ## x ## rows ## _Add(mat_t a, mat_t b) \
+{ \
+    for(int x = 0; x < cols; x++) \
+        for(int y = 0; y < rows; y++) \
+        a.col[x].comp[y] += b.col[x].comp[y]; \
+    return a; \
+}  \
+static mat_t prefix ## mat ## cols ## x ## rows ## _Mul_s(mat_t a, scal_t b) \
+{ \
+    for(int x = 0; x < cols; x++) \
+        for(int y = 0; y < rows; y++) \
+            a.col[x].comp[y] *= b; \
+    return a; \
+} \
+static mat_t prefix ## mat ## cols ## x ## rows ## _s_Mul(scal_t b, mat_t a) \
+{ \
+    for(int x = 0; x < cols; x++) \
+        for(int y = 0; y < rows; y++) \
+            a.col[x].comp[y] *= b; \
+    return a; \
+} \
+static prefix ## vec ## cols prefix ## mat ## cols ## x ## rows ## _Mul_v(mat_t a, prefix ## vec ## rows b) \
+{ \
+    prefix ## vec ## cols ret; \
+    for(int x = 0; x < cols; x++) \
+    { \
+        ret.comp[x] = 0; \
+        for(int y = 0; y < rows; y++) \
+            ret.comp[x] += a.col[x].comp[y] * b.comp[y]; \
+    } \
+    return ret; \
+}  \
+static prefix ## mat ## rows ## x ## cols prefix ## mat ## cols ## x ## rows ## _Transpose(mat_t a) \
+{ \
+    prefix ## mat ## rows ## x ## cols ret; \
+    for(int x = 0; x < cols; x++) \
+        for(int y = 0; y < rows; y++) \
+            ret.col[y].comp[x] = a.col[x].comp[y]; \
+    return ret; \
+} \
+static mat_t prefix ## mat ## cols ## x ## rows ## _Identity() \
+{ \
+    mat_t ret; \
+    for(int x = 0; x < cols; x++) \
+        for(int y = 0; y < rows; y++) \
+            ret.col[x].comp[y] = !!(x == y); \
+    return ret; \
+}
 
 //Matrix definition. Column major.
 #define matDef(prefix, cols, rows, scal_t)   \
 typedef struct prefix ## mat ## cols ## x ## rows  \
 {   \
     prefix ## vec ## rows col[cols];    \
-} prefix ## mat ## cols ## x ## rows;  \
+} prefix ## mat ## cols ## x ## rows;  
 
 //Matrix multiplication for each valid combination.
 #define matMul(prefix, m, n, p) \

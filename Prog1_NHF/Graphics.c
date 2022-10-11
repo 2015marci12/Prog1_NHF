@@ -269,6 +269,12 @@ void GLShader_Bind(GLShader* ptr)
 	else glUseProgram(0);
 }
 
+vertexAttribute_t vertexAttribute(uint32_t bindingIndex, uint32_t attribute, GLDataType type, uint32_t size, bool normalize, ptrdiff_t offset)
+{
+	vertexAttribute_t ret = { bindingIndex, attribute, type, size, normalize, offset };
+	return ret;
+}
+
 GLVertexArray* GLVertexArray_Create(const vertexAttribute_t* attribs, size_t attrib_count)
 {
 	uint32_t vao;
