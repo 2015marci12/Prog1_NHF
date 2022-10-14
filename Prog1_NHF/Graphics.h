@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+
 void GLEnableDebugOutput();
 
 /*
@@ -154,9 +155,9 @@ void GLVertexArray_BindBuffer(GLVertexArray* ptr, uint32_t binding, GLBuffer* bu
 typedef enum GLFormat
 {
 	GLFormat_NONE = 0,
-	GLFormat_RGBA = GL_RGBA,
-	GLFormat_BGRA = GL_BGRA,
-	GLFormat_RGB = GL_RGB,
+	GLFormat_RGBA = GL_RGBA8,
+	GLFormat_BGRA = GL_BGRA, //Cannot be used as internal format
+	GLFormat_RGB = GL_RGB8,
 	GLFormat_R32UI = GL_R32UI,
 	GLFormat_R32F = GL_R32F,
 	GLFormat_RGBA32F = GL_RGBA32F,

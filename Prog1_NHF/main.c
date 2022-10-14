@@ -36,6 +36,8 @@ int main(int argc, char* argv[])
         440, 360,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+
     if (window == NULL)
     {
         SDL_Log("Nem hozhato letre az ablak: %s", SDL_GetError());
@@ -115,14 +117,20 @@ int main(int argc, char* argv[])
     GLShader* shader = GLShader_Create(sources, 2);
     GLShader_Bind(shader);
 
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
     Renderer2D renderer;
     Renderer2D_Init(&renderer);
-    Renderer2D_Destroy(&renderer);
 
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    Renderer2D_BeginBatch(&renderer);
+
+    Renderer2D_DrawQuad(&renderer, mat4x4_Identity(), new_vec4(1, 1, 1, 1), NULL, new_Rect(0, 0, 1, 1));
+
+    Renderer2D_EndBatch(&renderer);
 
     SDL_GL_SwapWindow(window);
 
+    Renderer2D_Destroy(&renderer);
     GLBuffer_Destroy(vbo);
     GLVertexArray_Destroy(vao);
     GLShader_Destroy(shader);

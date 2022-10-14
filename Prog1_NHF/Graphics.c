@@ -37,8 +37,8 @@ MessageCallback(GLenum source,
 
 void GLEnableDebugOutput()
 {
-	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(MessageCallback, 0);
+	glDebugMessageCallback((GLDEBUGPROC)MessageCallback, 0);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 }
 
 GLBuffer* GLBuffer_Create(size_t size, GLBufferFlags flags, const void* Init_Data)
@@ -356,6 +356,12 @@ GLTexture* GLTexture_Create(GLTextureType type, GLFormat format, uvec3 size, uin
 	default:
 		break;
 	}
+
+	glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 	GLTexture temp = { type, format, size,{ tex } };
 	GLTexture* ret = malloc(sizeof(GLTexture));
 	memcpy(ret, &temp, sizeof(GLTexture));

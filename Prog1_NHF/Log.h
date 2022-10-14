@@ -25,9 +25,9 @@
 #define	FATAL_STR(str) "\x1b[37;41m" str "\x1b[0m"
 
 #ifndef NO_LOG
-#	define TRACE(format, ...) printf(TRACE_STR(format) VA_ARGS(__VA_ARGS__))
-#	define INFO(format, ...) printf(INFO_STR(format) VA_ARGS(__VA_ARGS__))
-#	define WARN(format, ...) printf(WARN_STR(format) VA_ARGS(__VA_ARGS__))
+#	define TRACE(format, ...) fprintf(stdout, TRACE_STR(format) VA_ARGS(__VA_ARGS__))
+#	define INFO(format, ...) fprintf(stdout, INFO_STR(format) VA_ARGS(__VA_ARGS__))
+#	define WARN(format, ...) fprintf(stdout, WARN_STR(format) VA_ARGS(__VA_ARGS__))
 #	define ERROR(format, ...) fprintf(stderr, ERROR_STR(format) VA_ARGS(__VA_ARGS__))
 #	define FATAL(format, ...) fprintf(stderr, FATAL_STR(format) VA_ARGS(__VA_ARGS__))
 #	define ASSERT(condition, format, ...) if(!(condition)) { FATAL(format, __VA_ARGS__); DEBUG_BREAK(); }

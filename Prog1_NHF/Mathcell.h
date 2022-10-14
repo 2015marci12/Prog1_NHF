@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <math.h>
 
+/*
+* Vector and matrix math.
+*/
+
 //Generalizable vector operations.
 #define vecOps(prefix, vec_t, scal_t, compNum) \
     static vec_t prefix ## vec ## compNum ## _Add(vec_t a, vec_t b) { for(int i = 0; i < compNum; i++) a.comp[i] += b.comp[i]; return a; } \
@@ -19,9 +23,13 @@
     static vec_t prefix ## vec ## compNum ## _s_Div(scal_t b, vec_t a) { for(int i = 0; i < compNum; i++) a.comp[i] = b / a.comp[i]; return a; } \
     static scal_t prefix ## vec ## compNum ## _Max(vec_t a) { scal_t max = 0; for(int i = 0; i < compNum; i++) max = (max < a.comp[i])? a.comp[i] : max; return max; } \
     static scal_t prefix ## vec ## compNum ## _Min(vec_t a) { scal_t min = prefix ## vec ## compNum ## _Max(a); for(int i = 0; i < compNum; i++) min = (min > a.comp[i])? a.comp[i] : min; return min; } \
+    static vec_t prefix ## vec ## compNum ## _Max_v(vec_t a, vec_t b) { for(int i = 0; i < compNum; i++) a.comp[i] = (a.comp[i] > b.comp[i]) ? a.comp[i] : b.comp[i]; return a; } \
+    static vec_t prefix ## vec ## compNum ## _Min_v(vec_t a, vec_t b) { for(int i = 0; i < compNum; i++) a.comp[i] = (a.comp[i] < b.comp[i]) ? a.comp[i] : b.comp[i]; return a; } \
+    static vec_t prefix ## vec ## compNum ## _Abs(vec_t a) { for(int i = 0; i < compNum; i++) a.comp[i] = (scal_t)fabs((double)a.comp[i]); return a; } \
     static scal_t prefix ## vec ## compNum ## _Len(vec_t a) { scal_t lensqr = 0; for(int i = 0; i < compNum; i++) lensqr += a.comp[i] * a.comp[i]; return (scal_t)sqrt(lensqr); } \
     static scal_t prefix ## vec ## compNum ## _Sum(vec_t a) { scal_t sum = 0; for(int i = 0; i < compNum; i++) sum += a.comp[i]; return sum; } \
-    static scal_t prefix ## vec ## compNum ## _Dot(vec_t a, vec_t b) { return prefix ## vec ## compNum ## _Sum(prefix ## vec ## compNum ## _Mul(a, b)); }
+    static scal_t prefix ## vec ## compNum ## _Dot(vec_t a, vec_t b) { return prefix ## vec ## compNum ## _Sum(prefix ## vec ## compNum ## _Mul(a, b)); } \
+    static vec_t prefix ## vec ## compNum ## _Normalize(vec_t a) { return prefix ## vec ## compNum ## _Div_s(a, prefix ## vec ## compNum ## _Len(a)); }
 
 //Vector definitions for different types.
 #define vecTypes(prefix, scal_t)        \
@@ -79,6 +87,7 @@ static prefix ## vec2 prefix ## vec2_Rot(prefix ## vec2 a, float angle) { return
 static float prefix ## vec2_Angle(prefix ## vec2 a) { return (float)atan2((double)a.x, (double)a.y); } \
 static prefix ## vec3 prefix ## vec3_Cross(prefix ## vec3 a, prefix ## vec3 b) { return new_ ## prefix ## vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
 
+//Vector "template" instantiations.
 vecTypes(, float)
 vecTypes(d, double)
 vecTypes(i, int32_t)
@@ -205,7 +214,85 @@ typedef prefix ## mat4x4 prefix ## mat4; \
 typedef prefix ## mat3x3 prefix ## mat3; \
 typedef prefix ## mat2x2 prefix ## mat2; \
 
+//Matrix "template" instantiations.
 matTypes(, float);
+
+//Matrix transform functions
+static mat4 mat4_Scale(mat4 a, vec3 scale) 
+{
+    for (int i = 0; i < 3; i++)
+        a.col[i] = vec4_Mul_s(a.col[i], scale.comp[i]);
+    return a;
+}
+
+static mat4 mat4_Translate(mat4 a, vec3 translate)
+{
+    a.col[3] = 
+        vec4_Add(vec4_Mul_s(a.col[0], translate.comp[0]),
+            vec4_Add(vec4_Mul_s(a.col[1], translate.comp[1]),
+                vec4_Add(vec4_Mul_s(a.col[2], translate.comp[2]),
+                    a.col[3])));
+    return a;
+}
+
+static mat4 mat4_Rotate(mat4 a, float angle, vec3 axis)
+{
+    const float c = cosf(angle);
+    const float s = sinf(angle);
+    const vec3 axis = vec3_Normalize(axis);
+    //TODO implement.
+    return a;
+}
+
+/*
+* Extra helpful things.
+*/
+
+typedef union Rect 
+{
+    struct { float x, y, w, h; };
+    struct { vec2 Pos, Size; };
+    vec4 rect;
+} Rect;
+
+static Rect new_Rect(float x, float y, float w, float h)
+{
+    Rect ret;
+    ret.rect = new_vec4(x, y, w, h);
+    return ret;
+}
+
+static Rect new_Rect_ps(vec2 Pos, vec2 Size) 
+{
+    Rect ret;
+    ret.Pos = Pos;
+    ret.Size = Size;
+    return ret;
+}
+
+static bool Rect_Contains(Rect r, vec2 p) 
+{
+    return (p.x >= r.x && p.y >= r.y) && (p.x <= (r.x + r.w) && p.y <= (r.y + r.h));
+}
+
+static bool Rect_Intersects(Rect a, Rect b, vec2* n, float* p) 
+{
+    vec2 diff = vec2_Sub(vec2_Add(a.Pos, vec2_Div_s(a.Size, 2.f)),
+        vec2_Add(b.Pos, vec2_Div_s(b.Size, 2.f)));
+    vec2 overlap = vec2_Sub(vec2_Mul_s(vec2_Add(a.Size, b.Size), 0.5f), vec2_Abs(diff));
+
+    //The penetration depth. negative values represent the distance between non-intersecting rectangles.
+    if (p) *p = vec2_Max(overlap);
+    //The collision normal. Along the axis of most penetration.
+    if (n) 
+    {
+        bool normalalongx = overlap.x > overlap.y;
+        (*n).x = ((float)!!normalalongx) * (diff.x / absf(diff.x));
+        (*n).y = ((float)!!(!normalalongx)) * (diff.y / absf(diff.y));
+    }
+
+    return (overlap.x > 0 || overlap.y > 0); //Whether the 2 intersect.
+}
 
 #define PI 
 

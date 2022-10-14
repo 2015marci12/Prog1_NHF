@@ -51,7 +51,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	gl_Position = MVP * vec4(Pos, 0);\n"
+			"	gl_Position = MVP * vec4(Pos, 1);\n"
 			"	vCol = Col;\n"
 			"	vtUV = tUV;\n"
 			"	vTex = Tex;\n"
@@ -82,7 +82,8 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		unsigned char whitetexdata[] = { 0xFF, 0xFF, 0xFF, 0xFF };
 		inst->WhiteTex = GLTexture_Create(GLTextureType_2D, GLFormat_RGBA, new_uvec3(1, 1, 1), 1);
 		GLTexture_Upload(inst->WhiteTex, 0, GLFormat_RGBA, new_uvec3(0, 0, 0), inst->WhiteTex->Size, whitetexdata);
-
+		
+		inst->Camera = mat4x4_Identity();
 	}
 	return inst;
 }
@@ -104,7 +105,7 @@ void Renderer2D_BeginBatch(Renderer2D* inst)
 	if (inst) 
 	{
 		//Reset textures.
-		inst->lastTex = 1;
+		inst->lastTex = 0;
 		for (int i = 0; i < MAX_TEXTURES; i++) 
 		{
 			inst->textures[i] = inst->WhiteTex;
@@ -142,4 +143,55 @@ void Renderer2D_NextBatch(Renderer2D* inst)
 {
 	Renderer2D_EndBatch(inst);
 	Renderer2D_BeginBatch(inst);
+}
+
+int Renderer2D_AddTexture(Renderer2D* inst, GLTexture* tex)
+{
+	ASSERT(inst);
+	if (!tex) return 0;
+	if (++(inst->lastTex) > MAX_TEXTURES - 1)
+	{
+		Renderer2D_NextBatch(inst);
+		return Renderer2D_AddTexture(inst, tex);
+	}
+	else 
+	{
+		inst->textures[inst->lastTex] = tex;
+		return inst->lastTex;
+	}
+}
+
+void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect)
+{
+	ASSERT(inst);
+
+	const vec4 quadVertexPos[] =
+	{
+		new_vec4(-0.5f, -0.5f, 0, 0),
+		new_vec4(-0.5f, 0.5f, 0, 0),
+		new_vec4(0.5f, 0.5f, 0, 0),
+		new_vec4(0.5f, -0.5f, 0, 0)
+	};
+
+	const vec2 texCoords[] =
+	{
+		texrect.Pos,
+		vec2_Add(texrect.Pos, new_vec2(texrect.Size.x, 0)),
+		vec2_Add(texrect.Pos, texrect.Size),
+		vec2_Add(texrect.Pos, new_vec2(0, texrect.Size.y)),
+	};
+
+	int texInd = Renderer2D_AddTexture(inst, texture);
+
+	for(int i = 0; i < 4; i++) 
+	{
+		QuadVertex* v = inst->Head;
+		vec4 temp = mat4x4_Mul_v(transform, quadVertexPos[i]);
+		v->Pos = new_vec3(temp.x, temp.y, temp.z);
+		v->Tex = (float)texInd;
+		v->Col = color;
+		v->tUV = texCoords[i];
+		inst->Head++;
+	}
+	inst->quadCount++;
 }

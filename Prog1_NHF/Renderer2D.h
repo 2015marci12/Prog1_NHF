@@ -43,4 +43,8 @@ void Renderer2D_BeginBatch(Renderer2D* inst);
 void Renderer2D_EndBatch(Renderer2D* inst);
 void Renderer2D_NextBatch(Renderer2D* inst);
 
+int Renderer2D_AddTexture(Renderer2D* inst, GLTexture* tex);
+
+void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect);
+
 //TODO drawing functions.
