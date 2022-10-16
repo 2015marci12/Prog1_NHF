@@ -4,8 +4,8 @@
 #include "Container.h"
 #include "ECS.h"
 #include "Renderer2D.h"
-
-#define SDL_MAIN_HANDLED
+#include "Input.h"
+#include "Timer.h"
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
@@ -13,13 +13,152 @@
 enum ComponentTypes
 {
     Component_NONE = 0,
-    Component_TRANSFORM = 1,
+    Component_TRANSFORM = 1, //mat4
+    Component_SPRITE = 2, //sprite
+    Component_CAMERA = 3, //camera
+    Component_PLAYER = 4, //player state 
 };
 
-typedef struct Transform 
+typedef struct Sprite 
 {
-    mat4 transform;
-} Transform;
+    vec4 tintColor;
+    SubTexture subTex;
+} Sprite;
+
+typedef struct Camera 
+{
+    mat4 proj;
+} Camera;
+
+void RenderSprites(Renderer2D* renderer, Scene_t* scene) 
+{
+    //pre-create view to cache storages.
+    View_t sprites = View_Create(scene, 2, Component_TRANSFORM, Component_SPRITE);
+
+    //For each entity with a camera (usually only one)
+    for (View_t cameras = View_Create(scene, 2, Component_CAMERA, Component_TRANSFORM); !View_End(&cameras); View_Next(&cameras)) 
+    {
+        Camera* cam = View_GetComponent(&cameras, 0);
+        mat4* cam_t = View_GetComponent(&cameras, 1);
+
+        Renderer2D_BeginScene(renderer, mat4x4x4_Mul(*cam_t, cam->proj));
+
+        //Render each renderable.
+        for (View_Reset(&sprites); !View_End(&sprites); View_Next(&sprites)) 
+        {
+            mat4* transform = View_GetComponent(&sprites, 0);
+            Sprite* sprite = View_GetComponent(&sprites, 1);
+
+            Renderer2D_DrawSprite(renderer, *transform, sprite->tintColor, sprite->subTex);
+        }
+
+        Renderer2D_EndScene(renderer);
+    }
+}
+
+typedef enum PlayerState
+{
+    Player_Idle,
+    Player_Walking,
+    Player_Attacking,
+    Player_Dashing,
+} PlayerState;
+
+typedef struct PlayerComponent 
+{
+    PlayerState state;
+    vec2 Direction;
+    Timer_t timeSinceStateChange;
+    Timer_t LastDash;
+} PlayerComponent;
+
+const float playerSpeed = 10.f;
+const float dashTime = 0.2f;
+const float dashSpeed = 40.f;
+const float dashRecharge = 0.5f;
+
+void UpdatePlayer(Scene_t* scene, float dt)
+{
+    View_t player = View_Create(scene, 3, Component_TRANSFORM, Component_SPRITE, Component_PLAYER);
+
+    mat4* transform = View_GetComponent(&player, 0);
+    Sprite* sprite = View_GetComponent(&player, 1);
+    PlayerComponent* pc = View_GetComponent(&player, 2);
+
+    InputSnapshot_t input = GetInput();
+
+    vec2 inputDir = new_vec2_v(0.f);
+    if (IsKeyPressed(&input, SDL_SCANCODE_W)) inputDir = vec2_Add(inputDir, new_vec2(0.f, 1.f, 0.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_S)) inputDir = vec2_Add(inputDir, new_vec2(0.f, -1.f, 0.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_D)) inputDir = vec2_Add(inputDir, new_vec2(1.f, 0.f, 0.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_A)) inputDir = vec2_Add(inputDir, new_vec2(-1.f, 0.f, 0.f));
+    inputDir = vec2_Normalize(inputDir);
+
+    float Elapsed = GetElapsedSeconds(pc->timeSinceStateChange);
+
+    switch (pc->state)
+    {
+    case Player_Idle:      
+        if (vec2_Len(inputDir) > 0.f)
+        {
+            pc->timeSinceStateChange = MakeTimer();
+            pc->state = Player_Walking;
+        }
+        else if (IsKeyPressed(&input, SDL_SCANCODE_LSHIFT) && GetElapsedSeconds(pc->LastDash) > dashRecharge)
+        {
+            pc->timeSinceStateChange = MakeTimer();
+            pc->LastDash = MakeTimer();
+            pc->state = Player_Dashing;
+        }
+        else 
+        {
+            *transform = mat4_Translate(*transform,
+                new_vec3_v2(
+                    vec2_Mul_s(pc->Direction, dt * max(0.f, playerSpeed * (0.2f - Elapsed)))
+                    , 0.f)
+            );
+        }
+        break;
+    case Player_Walking:  
+        if (vec2_Len(inputDir) < 0.1f)
+        {
+            pc->timeSinceStateChange = MakeTimer();
+            pc->state = Player_Idle;
+        }
+        else if (IsKeyPressed(&input, SDL_SCANCODE_LSHIFT) && GetElapsedSeconds(pc->LastDash) > dashRecharge)
+        {
+            pc->timeSinceStateChange = MakeTimer();
+            pc->LastDash = MakeTimer();
+            pc->state = Player_Dashing;
+        }
+        else 
+        {
+            pc->Direction = inputDir;
+            *transform = mat4_Translate(*transform,
+                new_vec3_v2(
+                    vec2_Mul_s(inputDir, dt * min(playerSpeed, playerSpeed * (Elapsed / 0.1f)))
+                    , 0.f)
+            );
+        }
+        break;
+    case Player_Dashing:
+        if (Elapsed > dashTime) 
+        {
+            pc->timeSinceStateChange = MakeTimer();
+            pc->state = Player_Idle;
+        }
+        else 
+        {
+            *transform = mat4_Translate(*transform,
+                new_vec3_v2(
+                    vec2_Mul_s(pc->Direction, dt * dashSpeed)
+                    , 0.f)
+            );
+        }
+        break;
+    }
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -33,7 +172,7 @@ int main(int argc, char* argv[])
 
     SDL_Window* window = SDL_CreateWindow("SDL peldaprogram", 
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-        440, 360,
+        1920, 1080,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -50,97 +189,68 @@ int main(int argc, char* argv[])
 
     GLEnableDebugOutput();
 
+    //Add components.
     Scene_t* scene = Scene_New();
-    ComponentInfo_t transformInfo = COMPONENT_DEF(Component_TRANSFORM, Transform);
+    ComponentInfo_t transformInfo = COMPONENT_DEF(Component_TRANSFORM, mat4);
     Scene_AddComponentType(scene, transformInfo);
+    ComponentInfo_t spriteInfo = COMPONENT_DEF(Component_SPRITE, Sprite);
+    Scene_AddComponentType(scene, spriteInfo);
+    ComponentInfo_t cameraInfo = COMPONENT_DEF(Component_CAMERA, Camera);
+    Scene_AddComponentType(scene, cameraInfo);
+    ComponentInfo_t playerInfo = COMPONENT_DEF(Component_PLAYER, PlayerComponent);
+    Scene_AddComponentType(scene, playerInfo);
 
-    for (int i = 0; i < 100; i++) 
-    {
-        entity_t e = Scene_CreateEntity(scene);
-        Transform* tr = Scene_AddComponent(scene, e, Component_TRANSFORM);
-        mat4 t;
-        for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) t.col[i].comp[j] = !!j == i;
-        tr->transform = t;
-
-        ASSERT(tr == Scene_Get(scene, e, Component_TRANSFORM));
-    }
-    TRACE("%s\n", Scene_GetStorage(scene, Component_TRANSFORM)->comp.name);
-    for (View_t v = View_Create(scene, 1, Component_TRANSFORM); !View_End(&v); View_Next(&v)) 
-    {
-        Transform* tr = View_GetComponent(&v, 0);
-        ASSERT(tr);
-    }
-    Scene_Delete(scene);
-
-    glViewport(0, 0, 440, 360);
-
-    glClearColor(1.f, 0.5f, 1.f, 1.f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
-    };
-    GLBuffer* vbo = GLBuffer_Create(9 * sizeof(float), 0, vertices);
-
-    vertexAttribute_t attribs[] = {
-        { 0, 0, GLDataType_FLOAT, 3, false, 0}
-    };
-    GLVertexArray* vao = GLVertexArray_Create(attribs, 1);
-    GLVertexArray_BindBuffer(vao, 0, vbo, 0, 3 * sizeof(float), GLAttribDiv_PERVERTEX);
-    GLVertexArray_Bind(vao);
-
-    const char vertexsource[] =
-        "   #version 330 core                                       \n"
-        "   layout(location = 0) in vec3 aPos;                      \n"
-        "                                                           \n"
-        "   void main()                                             \n"
-        "   {                                                       \n"
-        "       gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);    \n"
-        "   }                                                       \n"
-        ;
-    const char fragmentsource[] =
-        "   #version 330 core                                       \n"
-        "   out vec4 FragColor;                                     \n"
-        "                                                           \n"
-        "   void main()                                             \n"
-        "   {                                                       \n"
-        "       FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);           \n"
-        "   }                                                       \n"
-        ;
-    shaderSource_t sources[] =
-    {
-        { GlShaderType_VERT, vertexsource },
-        { GlShaderType_FRAG, fragmentsource },
-    };
-    GLShader* shader = GLShader_Create(sources, 2);
-    GLShader_Bind(shader);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
 
     Renderer2D renderer;
     Renderer2D_Init(&renderer);
 
-    Renderer2D_BeginBatch(&renderer);
+    int w, h;
+    SDL_GetWindowSize(window, &w, &h);
+    glViewport(0, 0, w, h);
+    float aspect = (float)w / (float)h;
 
-    Renderer2D_DrawQuad(&renderer, mat4x4_Identity(), new_vec4(1, 1, 1, 1), NULL, new_Rect(0, 0, 1, 1));
+    entity_t e = Scene_CreateEntity(scene);
+    mat4* tr = Scene_AddComponent(scene, e, Component_TRANSFORM);
+    Sprite* s = Scene_AddComponent(scene, e, Component_SPRITE);
+    PlayerComponent* pc = Scene_AddComponent(scene, e, Component_PLAYER);
 
-    Renderer2D_EndBatch(&renderer);
+    *tr = mat4x4_Identity();
+    s->subTex = SubTexture_empty();
+    s->tintColor = new_vec4(0.f, 0.5f, 1.f, 1.f);
+    pc->Direction = new_vec2_v(0.f);
+    pc->state = Player_Idle;
+    pc->timeSinceStateChange = MakeTimer();
 
-    SDL_GL_SwapWindow(window);
+    entity_t came = Scene_CreateEntity(scene);
+    mat4* cam_tr = Scene_AddComponent(scene, e, Component_TRANSFORM);
+    Camera* cam = Scene_AddComponent(scene, e, Component_CAMERA);
+    *cam_tr = mat4x4_Identity();
+    float scale = 10.f;
+    cam->proj = mat4_ortho(-aspect * scale, aspect * scale, scale, -scale, -1000, 1000);
 
-    Renderer2D_Destroy(&renderer);
-    GLBuffer_Destroy(vbo);
-    GLVertexArray_Destroy(vao);
-    GLShader_Destroy(shader);
+    Timer_t timer = MakeTimer();
 
-    /* varunk a kilepesre */
     SDL_Event ev;
-    while (SDL_WaitEvent(&ev) && ev.type != SDL_QUIT) {
+    while (!(SDL_PollEvent(&ev) && ev.type == SDL_QUIT)) 
+    {
+
+        float timediff = GetElapsedSeconds(timer);
+        timer = MakeTimer();
+
+        UpdatePlayer(scene, timediff);
+
+        Renderer2D_Clear(&renderer, new_vec4_v(0.f));
+
+        RenderSprites(&renderer, scene);
+
+        SDL_GL_SwapWindow(window);
         /* SDL_RenderPresent(renderer); - MacOS Mojave esetén */
+
+        SDL_PumpEvents();
     }
 
+    Scene_Delete(scene);
+    Renderer2D_Destroy(&renderer);
     SDL_GL_DeleteContext(glcontext);
     SDL_Quit();
 

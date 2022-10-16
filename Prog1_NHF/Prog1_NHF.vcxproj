@@ -19,14 +19,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Animation.c" />
     <ClCompile Include="Container.c" />
     <ClCompile Include="ECS.c" />
     <ClCompile Include="Graphics.c" />
+    <ClCompile Include="Input.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="PoolAllocator.c" />
     <ClCompile Include="Renderer2D.c" />
+    <ClCompile Include="Timer.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Animation.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="debugmalloc.h" />
@@ -34,10 +38,12 @@
     <ClInclude Include="GL\Buffer.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />
+    <ClInclude Include="Input.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
     <ClInclude Include="PoolAllocator.h" />
     <ClInclude Include="Renderer2D.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

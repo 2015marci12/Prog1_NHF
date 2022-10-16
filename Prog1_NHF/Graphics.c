@@ -9,28 +9,41 @@ MessageCallback(GLenum source,
 	const GLchar* message,
 	const void* userParam)
 {
+
+	char* stringType = "";
+	switch (type)
+	{
+	case GL_DEBUG_TYPE_ERROR: stringType = "Error"; break;	//An error, typically from the API
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: stringType = "DEPRECATED_BEHAVIOR"; break;	//Some behavior marked deprecated has been used
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: stringType = "UNDEFINED_BEHAVIOR"; break;	//Something has invoked undefined behavior
+		case GL_DEBUG_TYPE_PORTABILITY: stringType = "PORTABILITY"; break;	//Some functionality the user relies upon is not portable
+		case GL_DEBUG_TYPE_PERFORMANCE: stringType = "PERFORMANCE"; break;	//Code has triggered possible performance issues
+		case GL_DEBUG_TYPE_MARKER: stringType = "MARKER"; break;	//Command stream annotation
+		case GL_DEBUG_TYPE_PUSH_GROUP: stringType = "PUSH_GROUP"; break;	//Group pushing
+		case GL_DEBUG_TYPE_POP_GROUP: stringType = "POP_GROUP"; break;	//Group popping
+		case GL_DEBUG_TYPE_OTHER: stringType = "OTHER"; break;	//
+	default:
+		break;
+	}
+
 	switch (severity)
 	{
 	case GL_DEBUG_SEVERITY_NOTIFICATION:
-		TRACE("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-			type, severity, message);
+		TRACE("GL %s: message = %s\n",
+			stringType, message);
 		break;
 	case GL_DEBUG_SEVERITY_LOW:
-		INFO("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-			type, severity, message);
+		INFO("GL %s: message = %s\n",
+			stringType, message);
 		break;
 	case GL_DEBUG_SEVERITY_MEDIUM:
-		WARN("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-			type, severity, message);
+		WARN("GL %s: message = %s\n",
+			stringType, message);
 		break;
 	case GL_DEBUG_SEVERITY_HIGH:
 	default:
-		ERROR("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-			type, severity, message);
+		ERROR("GL %s: message = %s\n",
+			stringType, message);
 		break;
 	}
 }
@@ -391,6 +404,7 @@ void GLTexture_Upload(GLTexture* ptr, uint32_t level, GLFormat pixelFormat, uvec
 	case GLFormat_RGB32F:	type = GL_FLOAT; format = GL_RGB; break;
 	case GLFormat_NONE:
 	default:
+		ASSERT(false, "Upload format not supported!");
 		break;
 	}
 

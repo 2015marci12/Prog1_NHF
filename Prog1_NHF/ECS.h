@@ -125,6 +125,7 @@ View_t View_Create(Scene_t* scene, size_t numComponents, ...);
 bool View_HasAll(View_t* ptr);
 bool View_End(View_t* ptr);
 void View_Next(View_t* ptr);
+void View_Reset(View_t* ptr);
 void* View_GetComponent(View_t* ptr, uint32_t CompIndex);
 entity_t View_GetCurrent(View_t* ptr);
 

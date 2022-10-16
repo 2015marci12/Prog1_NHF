@@ -9,6 +9,7 @@
 
 //Generalizable vector operations.
 #define vecOps(prefix, vec_t, scal_t, compNum) \
+    static vec_t new_ ## prefix ## vec ## compNum ## _v(scal_t v) { vec_t ret; for(int i = 0; i < compNum; i++) ret.comp[i] = v; return ret; } \
     static vec_t prefix ## vec ## compNum ## _Add(vec_t a, vec_t b) { for(int i = 0; i < compNum; i++) a.comp[i] += b.comp[i]; return a; } \
     static vec_t prefix ## vec ## compNum ## _Add_s(vec_t a, scal_t b) { for(int i = 0; i < compNum; i++) a.comp[i] += b; return a; } \
     static vec_t prefix ## vec ## compNum ## _s_Add(scal_t b, vec_t a) { for(int i = 0; i < compNum; i++) a.comp[i] += b; return a; } \
@@ -29,7 +30,18 @@
     static scal_t prefix ## vec ## compNum ## _Len(vec_t a) { scal_t lensqr = 0; for(int i = 0; i < compNum; i++) lensqr += a.comp[i] * a.comp[i]; return (scal_t)sqrt(lensqr); } \
     static scal_t prefix ## vec ## compNum ## _Sum(vec_t a) { scal_t sum = 0; for(int i = 0; i < compNum; i++) sum += a.comp[i]; return sum; } \
     static scal_t prefix ## vec ## compNum ## _Dot(vec_t a, vec_t b) { return prefix ## vec ## compNum ## _Sum(prefix ## vec ## compNum ## _Mul(a, b)); } \
-    static vec_t prefix ## vec ## compNum ## _Normalize(vec_t a) { return prefix ## vec ## compNum ## _Div_s(a, prefix ## vec ## compNum ## _Len(a)); }
+    static vec_t prefix ## vec ## compNum ## _Normalize(vec_t a) { scal_t len = prefix ## vec ## compNum ## _Len(a); return len != 0.f ? prefix ## vec ## compNum ## _Div_s(a, len) : a; }
+
+#define vecConversion(prefix, scal_t, prefix1, scal_t1, compNum) \
+    static prefix ## vec ## compNum prefix1 ## vec ## compNum ## _to_ ## prefix ## vec ## compNum ## (prefix1 ## vec ## compNum a) \
+        { prefix ## vec ## compNum ret; for(int i = 0; i < compNum; i++) ret.comp[i] = (scal_t)a.comp[i]; return ret; } \
+    static prefix1 ## vec ## compNum prefix ## vec ## compNum ## _to_ ## prefix1 ## vec ## compNum ## (prefix ## vec ## compNum a) \
+        { prefix1 ## vec ## compNum ret; for(int i = 0; i < compNum; i++) ret.comp[i] = (scal_t1)a.comp[i]; return ret; } \
+
+#define vecConversions(prefix, scal_t, prefix1, scal_t1) \
+    vecConversion(prefix, scal_t, prefix1, scal_t1, 2) \
+    vecConversion(prefix, scal_t, prefix1, scal_t1, 3) \
+    vecConversion(prefix, scal_t, prefix1, scal_t1, 4) \
 
 //Vector definitions for different types.
 #define vecTypes(prefix, scal_t)        \
@@ -61,12 +73,60 @@ static prefix ## vec2 new_ ## prefix ## vec2(scal_t x, scal_t y) \
     vec.y = y; \
     return vec; \
 } \
+static prefix ## vec2 new_ ## prefix ## vec2_v3(prefix ## vec3 a) \
+{ \
+    prefix ## vec2 vec; \
+    vec.x = a.x; \
+    vec.y = a.y; \
+    return vec; \
+} \
+static prefix ## vec2 new_ ## prefix ## vec2_v4(prefix ## vec4 a) \
+{ \
+    prefix ## vec2 vec; \
+    vec.x = a.x; \
+    vec.y = a.y; \
+    return vec; \
+} \
+static prefix ## vec3 new_ ## prefix ## vec3_v2(prefix ## vec2 a, scal_t z) \
+{ \
+    prefix ## vec3 vec; \
+    vec.x = a.x; \
+    vec.y = a.y; \
+    vec.z = z; \
+    return vec; \
+} \
 static prefix ## vec3 new_ ## prefix ## vec3(scal_t x, scal_t y, scal_t z) \
 { \
     prefix ## vec3 vec; \
     vec.x = x; \
     vec.y = y; \
     vec.z = z; \
+    return vec; \
+} \
+static prefix ## vec3 new_ ## prefix ## vec3_v4(prefix ## vec4 a) \
+{ \
+    prefix ## vec3 vec; \
+    vec.x = a.x; \
+    vec.y = a.y; \
+    vec.z = a.z; \
+    return vec; \
+} \
+static prefix ## vec4 new_ ## prefix ## vec4_v2(prefix ## vec2 a, scal_t z, scal_t w) \
+{ \
+    prefix ## vec4 vec; \
+    vec.x = a.x; \
+    vec.y = a.y; \
+    vec.z = z; \
+    vec.w = w; \
+    return vec; \
+} \
+static prefix ## vec4 new_ ## prefix ## vec4_v3(prefix ## vec3 a, scal_t w) \
+{ \
+    prefix ## vec4 vec; \
+    vec.x = a.x; \
+    vec.y = a.y; \
+    vec.z = a.z; \
+    vec.w = w; \
     return vec; \
 } \
 static prefix ## vec4 new_ ## prefix ## vec4(scal_t x, scal_t y, scal_t z, scal_t w) \
@@ -78,7 +138,6 @@ static prefix ## vec4 new_ ## prefix ## vec4(scal_t x, scal_t y, scal_t z, scal_
     vec.w = w; \
     return vec; \
 } \
-                                        \
 vecOps(prefix, prefix ## vec2, scal_t, 2)      \
 vecOps(prefix, prefix ## vec3, scal_t, 3)      \
 vecOps(prefix, prefix ## vec4, scal_t, 4)      \
@@ -92,6 +151,14 @@ vecTypes(, float)
 vecTypes(d, double)
 vecTypes(i, int32_t)
 vecTypes(u, uint32_t)
+
+vecConversions(, float, d, double)
+vecConversions(, float, i, int32_t)
+vecConversions(, float, u, uint32_t)
+vecConversions(d, double, i, int32_t)
+vecConversions(d, double, u, uint32_t)
+vecConversions(i, int32_t, u, uint32_t)
+
 
 //Matrix operations.
 #define matOps(prefix, cols, rows, mat_t, scal_t) \
@@ -235,14 +302,105 @@ static mat4 mat4_Translate(mat4 a, vec3 translate)
     return a;
 }
 
-static mat4 mat4_Rotate(mat4 a, float angle, vec3 axis)
+static mat4 mat4_Rotate(mat4 a, float angle, vec3 axis_)
 {
     const float c = cosf(angle);
     const float s = sinf(angle);
-    const vec3 axis = vec3_Normalize(axis);
-    //TODO implement.
-    return a;
+    const vec3 axis = vec3_Normalize(axis_);
+    const vec3 temp = vec3_Mul(new_vec3(1.f - c, 1.f - c, 1.f - c), axis);
+
+    //Algorithm from https://github.com/g-truc/glm/blob/master/glm/ext/matrix_transform.inl
+    mat4 Rotate;
+    Rotate.col[0].comp[0] = c + temp.comp[0] * axis.comp[0];
+    Rotate.col[0].comp[1] = temp.comp[0] * axis.comp[1] + s * axis.comp[2];
+    Rotate.col[0].comp[2] = temp.comp[0] * axis.comp[2] - s * axis.comp[1];
+
+    Rotate.col[1].comp[0] = temp.comp[1] * axis.comp[0] - s * axis.comp[2];
+    Rotate.col[1].comp[1] = c + temp.comp[1] * axis.comp[1];
+    Rotate.col[1].comp[2] = temp.comp[1] * axis.comp[2] + s * axis.comp[0];
+
+    Rotate.col[2].comp[0] = temp.comp[2] * axis.comp[0] + s * axis.comp[1];
+    Rotate.col[2].comp[1] = temp.comp[2] * axis.comp[1] - s * axis.comp[0];
+    Rotate.col[2].comp[2] = c + temp.comp[2] * axis.comp[2];
+
+    mat4 Result;
+    Result.col[0] = vec4_Add(vec4_Mul_s(a.col[0], Rotate.col[0].comp[0]), vec4_Add(vec4_Mul_s(a.col[1], Rotate.col[0].comp[1]), vec4_Mul_s(a.col[2], Rotate.col[0].comp[2])));
+    Result.col[1] = vec4_Add(vec4_Mul_s(a.col[0], Rotate.col[1].comp[0]), vec4_Add(vec4_Mul_s(a.col[1], Rotate.col[1].comp[1]), vec4_Mul_s(a.col[2], Rotate.col[1].comp[2])));
+    Result.col[2] = vec4_Add(vec4_Mul_s(a.col[0], Rotate.col[2].comp[0]), vec4_Add(vec4_Mul_s(a.col[1], Rotate.col[2].comp[1]), vec4_Mul_s(a.col[2], Rotate.col[2].comp[2])));
+    Result.col[3] = a.col[3];
+    return Result;
 }
+
+static mat4 mat4_LookAt(mat4 a, vec3 eye, vec3 center, vec3 up) 
+{
+    //Algorithm from https://github.com/g-truc/glm/blob/master/glm/ext/matrix_transform.inl
+#   ifndef MATH_LHS //Turn on for vulkan and the like.
+    const vec3 f = vec3_Normalize(vec3_Sub(eye, center));
+    const vec3 s = vec3_Normalize(vec3_Cross(up, f));
+    const vec3 u = vec3_Cross(f, s);
+
+    mat4 Result = mat4x4_Identity();
+    Result.col[0].comp[0] = s.x;
+    Result.col[1].comp[0] = s.y;
+    Result.col[2].comp[0] = s.z;
+    Result.col[3].comp[0] = -vec3_Dot(s, eye);
+
+    Result.col[0].comp[1] = u.x;
+    Result.col[1].comp[1] = u.y;
+    Result.col[2].comp[1] = u.z;
+    Result.col[3].comp[1] = -vec3_Dot(u, eye);
+
+    Result.col[0].comp[2] = -f.x;
+    Result.col[1].comp[2] = -f.y;
+    Result.col[2].comp[2] = -f.z;
+    Result.col[3].comp[2] = vec3_Dot(f, eye);
+
+    return Result;
+#   else
+    mat4 Result = mat4x4_Identity();
+    Result.col[0].comp[0] = s.x;
+    Result.col[1].comp[0] = s.y;
+    Result.col[2].comp[0] = s.z;
+    Result.col[3].comp[0] = -vec3_Dot(s, eye);
+
+    Result.col[0].comp[1] = u.x;
+    Result.col[1].comp[1] = u.y;
+    Result.col[2].comp[1] = u.z;
+    Result.col[3].comp[1] = -vec3_Dot(u, eye);
+
+    Result.col[0].comp[2] = f.x;
+    Result.col[1].comp[2] = f.y;
+    Result.col[2].comp[2] = f.z;
+    Result.col[3].comp[2] = -vec3_Dot(f, eye);
+
+    return Result;
+#   endif
+}
+
+static mat4 mat4_ortho(float left, float right, float top, float bottom, float zNear, float zFar) 
+{
+#   ifndef MATH_LHS //Turn on for vulkan and the like.
+    mat4 Result = mat4x4_Identity();
+    Result.col[0].comp[0] =  2.f / (right - left);
+    Result.col[1].comp[1] =  2.f / (top - bottom);
+    Result.col[2].comp[2] = -2.f / (zFar - zNear);
+    Result.col[3].comp[0] = -(right + left) / (right - left);
+    Result.col[3].comp[1] = -(top + bottom) / (top - bottom);
+    Result.col[3].comp[2] = -(zFar + zNear) / (zFar - zNear);
+    return Result;
+#   else
+    mat4 Result = mat4x4_Identity();
+    Result.col[0].comp[0] = 2.f / (right - left);
+    Result.col[1].comp[1] = 2.f / (top - bottom);
+    Result.col[2].comp[2] = 2.f / (zFar - zNear);
+    Result.col[3].comp[0] = -(right + left) / (right - left);
+    Result.col[3].comp[1] = -(top + bottom) / (top - bottom);
+    Result.col[3].comp[2] = -(zFar + zNear) / (zFar - zNear);
+    return Result;
+#   endif
+}
+
+//TODO projection, frustrum, decompose and other matrix funcions.
 
 /*
 * Extra helpful things.

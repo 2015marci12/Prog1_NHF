@@ -36,6 +36,15 @@
     <ClCompile Include="Renderer2D.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Animation.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Input.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -69,6 +78,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Renderer2D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

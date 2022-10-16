@@ -2,6 +2,7 @@
 #include "Core.h"
 #include "Log.h"
 #include "Graphics.h"
+#include "Animation.h"
 
 typedef struct QuadVertex 
 {
@@ -45,6 +46,12 @@ void Renderer2D_NextBatch(Renderer2D* inst);
 
 int Renderer2D_AddTexture(Renderer2D* inst, GLTexture* tex);
 
-void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect);
+void Renderer2D_BeginScene(Renderer2D* inst, mat4 camera);
+void Renderer2D_EndScene(Renderer2D* inst);
 
-//TODO drawing functions.
+void Renderer2D_Clear(Renderer2D* inst, vec4 color);
+
+void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect);
+void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec4 tint, SubTexture subtex);
+
+//TODO drawing functions, gbuffer for potential normal mapping, rendertarget switching, text, lights.

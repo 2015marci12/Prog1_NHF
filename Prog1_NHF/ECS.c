@@ -382,6 +382,16 @@ void View_Next(View_t* ptr)
 	} while (ptr->currentEntity != -1 && !View_HasAll(ptr));
 }
 
+void View_Reset(View_t* ptr)
+{
+	ASSERT(ptr, "View_Reset does not permit ptr to be NULL");
+	if (ptr->components != 0) 
+	{
+		ptr->currentEntity = ptr->storages[ptr->smallestSetIndex]->sparse.dense[0];
+		ptr->currentIndex = 0;
+	}
+}
+
 void* View_GetComponent(View_t* ptr, uint32_t CompIndex)
 {
 	ASSERT(ptr, "View_GetComponent does not permit ptr to be NULL");

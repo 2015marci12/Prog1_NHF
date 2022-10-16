@@ -162,6 +162,7 @@ typedef enum GLFormat
 	GLFormat_R32F = GL_R32F,
 	GLFormat_RGBA32F = GL_RGBA32F,
 	GLFormat_RGB32F = GL_RGB32F,
+	GLFormat_D24S8 = GL_DEPTH24_STENCIL8,
 } GLFormat;
 
 typedef enum GLTextureType 

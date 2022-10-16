@@ -84,6 +84,8 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		GLTexture_Upload(inst->WhiteTex, 0, GLFormat_RGBA, new_uvec3(0, 0, 0), inst->WhiteTex->Size, whitetexdata);
 		
 		inst->Camera = mat4x4_Identity();
+
+		inst->quadCount = 0;
 	}
 	return inst;
 }
@@ -122,6 +124,15 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 	if(inst) 
 	{
 		//Setup render state.
+
+		//Blending.
+		glEnable(GL_BLEND);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+
+		//Depth.
+		glEnable(GL_DEPTH_TEST);
+
+		//Bind objects.
 		GLShader_Bind(inst->quadShader);
 		GLVertexArray_Bind(inst->quadVAO);
 		GLBuffer_BindTarget(inst->quadIBO, GLBufferTarget_INDEXBUFFER);
@@ -147,7 +158,7 @@ void Renderer2D_NextBatch(Renderer2D* inst)
 
 int Renderer2D_AddTexture(Renderer2D* inst, GLTexture* tex)
 {
-	ASSERT(inst);
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
 	if (!tex) return 0;
 	if (++(inst->lastTex) > MAX_TEXTURES - 1)
 	{
@@ -161,9 +172,32 @@ int Renderer2D_AddTexture(Renderer2D* inst, GLTexture* tex)
 	}
 }
 
+void Renderer2D_BeginScene(Renderer2D* inst, mat4 camera)
+{
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
+
+	if (inst->quadCount > 0) Renderer2D_NextBatch(inst);
+	else Renderer2D_BeginBatch(inst);
+
+	inst->Camera = camera;
+}
+
+void Renderer2D_EndScene(Renderer2D* inst)
+{
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
+	Renderer2D_EndBatch(inst);
+}
+
+void Renderer2D_Clear(Renderer2D* inst, vec4 color)
+{
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
+	glClearColor(color.r, color.g, color.b, color.a);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
 void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect)
 {
-	ASSERT(inst);
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
 
 	const vec4 quadVertexPos[] =
 	{
@@ -194,4 +228,9 @@ void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture
 		inst->Head++;
 	}
 	inst->quadCount++;
+}
+
+void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec4 tint, SubTexture subtex)
+{
+	Renderer2D_DrawQuad(inst, transform, tint, subtex.texture, subtex.texRect);
 }
