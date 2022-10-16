@@ -69,10 +69,11 @@ void Renderer2D_EndScene(Renderer2D* inst);
 void Renderer2D_Clear(Renderer2D* inst, vec4 color);
 void Renderer2D_SetLineWidth(Renderer2D* inst, float width);
 
-void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect);
-void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec4 tint, SubTexture subtex);
+void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec2 size, vec4 color, GLTexture* texture, Rect texrect);
+void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec2 size, vec4 tint, SubTexture subtex);
 
 void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color);
 void Renderer2D_DrawRect(Renderer2D* inst, Rect rect, float z, vec4 color);
+void Renderer2D_DrawRect_t(Renderer2D* inst, mat4 transform, Rect rect, float z, vec4 color);
 
 //TODO drawing functions, gbuffer for potential normal mapping, rendertarget switching, text, lights.

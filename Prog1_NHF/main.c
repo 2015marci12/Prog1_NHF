@@ -22,6 +22,7 @@ enum ComponentTypes
 typedef struct Sprite 
 {
     vec4 tintColor;
+    vec2 size;
     SubTexture subTex;
 } Sprite;
 
@@ -49,10 +50,10 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
             mat4* transform = View_GetComponent(&sprites, 0);
             Sprite* sprite = View_GetComponent(&sprites, 1);
 
-            Renderer2D_DrawSprite(renderer, *transform, sprite->tintColor, sprite->subTex);
-            vec4 pos = new_vec4(-.5f, -.5f, 0.f, 0.f);
-            pos = mat4x4_Mul_v(*transform, pos);
-            Renderer2D_DrawRect(renderer, new_Rect_ps(new_vec2_v4(pos), new_vec2_v(1.f)), 1.f, new_vec4_v(1.f));
+            Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
+            Rect r = new_Rect(-0.5f, -0.5f, 1.f, 1.f);
+            r.rect = vec4_Mul(r.rect, new_vec4_v2(sprite->size, sprite->size.x,sprite->size.y));
+            Renderer2D_DrawRect_t(renderer, *transform, r, 1.f, new_vec4_v(1.f));
         }
 
         Renderer2D_EndScene(renderer);
@@ -220,6 +221,7 @@ int main(int argc, char* argv[])
     *tr = mat4x4_Identity();
     s->subTex = SubTexture_empty();
     s->tintColor = new_vec4(0.f, 0.5f, 1.f, 1.f);
+    s->size = new_vec2_v(1.f);
     pc->Direction = new_vec2_v(0.f);
     pc->state = Player_Idle;
     pc->timeSinceStateChange = MakeTimer();

@@ -287,7 +287,7 @@ void Renderer2D_SetLineWidth(Renderer2D* inst, float width)
 	inst->lineWidth = width;
 }
 
-void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect)
+void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec2 size, vec4 color, GLTexture* texture, Rect texrect)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
 
@@ -313,7 +313,7 @@ void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture
 	for (int i = 0; i < 4; i++)
 	{
 		QuadVertex* v = inst->quadHead;
-		vec4 temp = mat4x4_Mul_v(transform, quadVertexPos[i]);
+		vec4 temp = mat4x4_Mul_v(transform, vec4_Mul(quadVertexPos[i], new_vec4_v2(size, 0.f, 0.f)));
 		v->Pos = new_vec3(temp.x, temp.y, temp.z);
 		v->Tex = (float)texInd;
 		v->Col = color;
@@ -323,9 +323,9 @@ void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture
 	inst->quadCount++;
 }
 
-void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec4 tint, SubTexture subtex)
+void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec2 size, vec4 tint, SubTexture subtex)
 {
-	Renderer2D_DrawQuad(inst, transform, tint, subtex.texture, subtex.texRect);
+	Renderer2D_DrawQuad(inst, transform, size, tint, subtex.texture, subtex.texRect);
 }
 
 void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color)
@@ -359,5 +359,22 @@ void Renderer2D_DrawRect(Renderer2D* inst, Rect rect, float z, vec4 color)
 	for(int i = 0; i < 4; i++) 
 	{
 		Renderer2D_DrawLine(inst, new_vec3_v2(points[i], z), new_vec3_v2(points[(i + 1) % 4], z), color);
+	}
+}
+
+void Renderer2D_DrawRect_t(Renderer2D* inst, mat4 transform, Rect rect, float z, vec4 color)
+{
+	vec4 points[4] =
+	{
+		new_vec4_v2(rect.Pos, z, 0.f),
+		new_vec4_v2(new_vec2(rect.x + rect.w, rect.y), z, 0.f),
+		new_vec4_v2(new_vec2(rect.x + rect.w, rect.y + rect.h), z, 0.f),
+		new_vec4_v2(new_vec2(rect.x, rect.y + rect.h), z, 0.f),
+	};
+
+	for (int i = 0; i < 4; i++) points[i] = mat4x4_Mul_v(transform, points[i]);
+	for (int i = 0; i < 4; i++)
+	{
+		Renderer2D_DrawLine(inst, new_vec3_v4(points[i]), new_vec3_v4(points[(i + 1) % 4]), color);
 	}
 }
