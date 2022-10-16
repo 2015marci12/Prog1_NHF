@@ -12,7 +12,14 @@ typedef struct QuadVertex
 	vec2 tUV;
 } QuadVertex;
 
+typedef struct LineVertex 
+{
+	vec3 Pos;
+	vec4 Col;
+} LineVertex;
+
 #define MAX_QUADS 65536
+#define MAX_LINES 65536
 #define MAX_TEXTURES 32
 
 typedef struct Renderer2D 
@@ -22,6 +29,10 @@ typedef struct Renderer2D
 	GLBuffer* quadIBO;
 	GLVertexArray* quadVAO;
 	GLShader* quadShader;
+
+	GLBuffer* lineVBO;
+	GLVertexArray* lineVAO;
+	GLShader* lineShader;
 	
 	//Texturing.
 	GLTexture* WhiteTex;
@@ -29,9 +40,15 @@ typedef struct Renderer2D
 	GLTexture* textures[MAX_TEXTURES];
 
 	//Quad vertex data.
-	QuadVertex* Base;
-	QuadVertex* Head;
+	QuadVertex* quadBase;
+	QuadVertex* quadHead;
 	uint32_t quadCount;
+
+	//Lines.
+	LineVertex* lineBase;
+	LineVertex* lineHead;
+	uint32_t lineCount;
+	float lineWidth;
 
 	//Camera.
 	mat4 Camera;
@@ -50,8 +67,12 @@ void Renderer2D_BeginScene(Renderer2D* inst, mat4 camera);
 void Renderer2D_EndScene(Renderer2D* inst);
 
 void Renderer2D_Clear(Renderer2D* inst, vec4 color);
+void Renderer2D_SetLineWidth(Renderer2D* inst, float width);
 
 void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec4 color, GLTexture* texture, Rect texrect);
 void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec4 tint, SubTexture subtex);
+
+void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color);
+void Renderer2D_DrawRect(Renderer2D* inst, Rect rect, float z, vec4 color);
 
 //TODO drawing functions, gbuffer for potential normal mapping, rendertarget switching, text, lights.

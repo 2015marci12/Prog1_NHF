@@ -50,6 +50,9 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
             Sprite* sprite = View_GetComponent(&sprites, 1);
 
             Renderer2D_DrawSprite(renderer, *transform, sprite->tintColor, sprite->subTex);
+            vec4 pos = new_vec4(-.5f, -.5f, 0.f, 0.f);
+            pos = mat4x4_Mul_v(*transform, pos);
+            Renderer2D_DrawRect(renderer, new_Rect_ps(new_vec2_v4(pos), new_vec2_v(1.f)), 1.f, new_vec4_v(1.f));
         }
 
         Renderer2D_EndScene(renderer);
