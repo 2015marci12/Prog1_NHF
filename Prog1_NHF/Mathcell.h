@@ -373,7 +373,7 @@ static mat4 mat4_LookAt(mat4 a, vec3 eye, vec3 center, vec3 up)
 #   endif
 }
 
-static mat4 mat4_ortho(float left, float right, float top, float bottom, float zNear, float zFar) 
+static mat4 mat4_Ortho(float left, float right, float top, float bottom, float zNear, float zFar) 
 {
 #   ifndef MATH_LHS //Turn on for vulkan and the like.
     mat4 Result = mat4x4_Identity();
@@ -394,6 +394,68 @@ static mat4 mat4_ortho(float left, float right, float top, float bottom, float z
     Result.col[3].comp[2] = -(zFar + zNear) / (zFar - zNear);
     return Result;
 #   endif
+}
+
+static mat4 mat4_Inverse(mat4 a) 
+{
+    //Algorithm from https://github.com/g-truc/glm/blob/master/glm/detail/func_matrix.inl
+    float Coef00 = a.col[2].comp[2] * a.col[3].comp[3] - a.col[3].comp[2] * a.col[2].comp[3];
+    float Coef02 = a.col[1].comp[2] * a.col[3].comp[3] - a.col[3].comp[2] * a.col[1].comp[3];
+    float Coef03 = a.col[1].comp[2] * a.col[2].comp[3] - a.col[2].comp[2] * a.col[1].comp[3];
+
+    float Coef04 = a.col[2].comp[1] * a.col[3].comp[3] - a.col[3].comp[1] * a.col[2].comp[3];
+    float Coef06 = a.col[1].comp[1] * a.col[3].comp[3] - a.col[3].comp[1] * a.col[1].comp[3];
+    float Coef07 = a.col[1].comp[1] * a.col[2].comp[3] - a.col[2].comp[1] * a.col[1].comp[3];
+
+    float Coef08 = a.col[2].comp[1] * a.col[3].comp[2] - a.col[3].comp[1] * a.col[2].comp[2];
+    float Coef10 = a.col[1].comp[1] * a.col[3].comp[2] - a.col[3].comp[1] * a.col[1].comp[2];
+    float Coef11 = a.col[1].comp[1] * a.col[2].comp[2] - a.col[2].comp[1] * a.col[1].comp[2];
+
+    float Coef12 = a.col[2].comp[0] * a.col[3].comp[3] - a.col[3].comp[0] * a.col[2].comp[3];
+    float Coef14 = a.col[1].comp[0] * a.col[3].comp[3] - a.col[3].comp[0] * a.col[1].comp[3];
+    float Coef15 = a.col[1].comp[0] * a.col[2].comp[3] - a.col[2].comp[0] * a.col[1].comp[3];
+
+    float Coef16 = a.col[2].comp[0] * a.col[3].comp[2] - a.col[3].comp[0] * a.col[2].comp[2];
+    float Coef18 = a.col[1].comp[0] * a.col[3].comp[2] - a.col[3].comp[0] * a.col[1].comp[2];
+    float Coef19 = a.col[1].comp[0] * a.col[2].comp[2] - a.col[2].comp[0] * a.col[1].comp[2];
+
+    float Coef20 = a.col[2].comp[0] * a.col[3].comp[1] - a.col[3].comp[0] * a.col[2].comp[1];
+    float Coef22 = a.col[1].comp[0] * a.col[3].comp[1] - a.col[3].comp[0] * a.col[1].comp[1];
+    float Coef23 = a.col[1].comp[0] * a.col[2].comp[1] - a.col[2].comp[0] * a.col[1].comp[1];
+
+    vec4 Fac0 = new_vec4(Coef00, Coef00, Coef02, Coef03);
+    vec4 Fac1 = new_vec4(Coef04, Coef04, Coef06, Coef07);
+    vec4 Fac2 = new_vec4(Coef08, Coef08, Coef10, Coef11);
+    vec4 Fac3 = new_vec4(Coef12, Coef12, Coef14, Coef15);
+    vec4 Fac4 = new_vec4(Coef16, Coef16, Coef18, Coef19);
+    vec4 Fac5 = new_vec4(Coef20, Coef20, Coef22, Coef23);
+
+    vec4 Vec0 = new_vec4(a.col[1].comp[0], a.col[0].comp[0], a.col[0].comp[0], a.col[0].comp[0]);
+    vec4 Vec1 = new_vec4(a.col[1].comp[1], a.col[0].comp[1], a.col[0].comp[1], a.col[0].comp[1]);
+    vec4 Vec2 = new_vec4(a.col[1].comp[2], a.col[0].comp[2], a.col[0].comp[2], a.col[0].comp[2]);
+    vec4 Vec3 = new_vec4(a.col[1].comp[3], a.col[0].comp[3], a.col[0].comp[3], a.col[0].comp[3]);
+
+    vec4 Inv0 = vec4_Add(vec4_Sub(vec4_Mul(Vec1, Fac0), vec4_Mul(Vec2, Fac1)), vec4_Mul(Vec3, Fac2));
+    vec4 Inv1 = vec4_Add(vec4_Sub(vec4_Mul(Vec0, Fac0), vec4_Mul(Vec2, Fac3)), vec4_Mul(Vec3, Fac4));
+    vec4 Inv2 = vec4_Add(vec4_Sub(vec4_Mul(Vec0, Fac1), vec4_Mul(Vec1, Fac3)), vec4_Mul(Vec3, Fac5));
+    vec4 Inv3 = vec4_Add(vec4_Sub(vec4_Mul(Vec0, Fac2), vec4_Mul(Vec1, Fac4)), vec4_Mul(Vec2, Fac5));
+
+    vec4 SignA = new_vec4(+1, -1, +1, -1);
+    vec4 SignB = new_vec4(-1, +1, -1, +1);
+    mat4 Inverse;
+    Inverse.col[0] = vec4_Mul(Inv0, SignA);
+    Inverse.col[1] = vec4_Mul(Inv1, SignB);
+    Inverse.col[2] = vec4_Mul(Inv2, SignA);
+    Inverse.col[3] = vec4_Mul(Inv3, SignB);
+
+    vec4 Row0 = new_vec4(Inverse.col[0].comp[0], Inverse.col[1].comp[0], Inverse.col[2].comp[0], Inverse.col[3].comp[0]);
+
+    vec4 Dot0 = vec4_Mul(a.col[0], Row0);
+    float Dot1 = (Dot0.x + Dot0.y) + (Dot0.z + Dot0.w);
+
+    float OneOverDeterminant = 1.f / Dot1;
+
+    return mat4x4_Mul_s(Inverse, OneOverDeterminant);
 }
 
 //TODO projection, frustrum, decompose and other matrix funcions.
@@ -448,5 +510,5 @@ static bool Rect_Intersects(Rect a, Rect b, vec2* n, float* p)
     return (overlap.x > 0 || overlap.y > 0); //Whether the 2 intersect.
 }
 
-#define PI 
+#define PI 3.1415f
 

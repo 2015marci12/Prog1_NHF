@@ -42,9 +42,9 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
     for (View_t cameras = View_Create(scene, 2, Component_CAMERA, Component_TRANSFORM); !View_End(&cameras); View_Next(&cameras)) 
     {
         Camera* cam = View_GetComponent(&cameras, 0);
-        mat4* cam_t = View_GetComponent(&cameras, 1);
+        mat4* cam_tr = View_GetComponent(&cameras, 1);
 
-        Renderer2D_BeginScene(renderer, mat4x4x4_Mul(cam->proj, *cam_t));
+        Renderer2D_BeginScene(renderer, mat4x4x4_Mul(cam->proj, mat4_Inverse(*cam_tr)));
 
         //Render each renderable.
         for (View_Reset(&sprites); !View_End(&sprites); View_Next(&sprites)) 
@@ -52,10 +52,9 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
             mat4* transform = View_GetComponent(&sprites, 0);
             Sprite* sprite = View_GetComponent(&sprites, 1);
 
-            Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
-            Rect r = new_Rect(-0.5f, -0.5f, 1.f, 1.f);
-            r.rect = vec4_Mul(r.rect, new_vec4_v2(sprite->size, sprite->size.x,sprite->size.y));
-            Renderer2D_DrawRect_t(renderer, *transform, r, 1.f, new_vec4_v(1.f));
+            //Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
+            vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+            Renderer2D_DrawRotatedQuad_s(renderer, pos, sprite->size, 0.f, sprite->tintColor, sprite->subTex);
         }
 
         Renderer2D_EndScene(renderer);
@@ -194,7 +193,7 @@ int main(int argc, char* argv[])
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
     if(!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) exit(-1);
 
-    GLEnableDebugOutput();
+    //GLEnableDebugOutput();
 
     //Add components.
     Scene_t* scene = Scene_New();
@@ -234,7 +233,7 @@ int main(int argc, char* argv[])
     Camera* cam = Scene_AddComponent(scene, came, Component_CAMERA);
     *cam_tr = mat4x4_Identity();
     float scale = 10.f;
-    cam->proj = mat4_ortho(-aspect * scale, aspect * scale, scale, -scale, -1000, 1000);
+    cam->proj = mat4_Ortho(-aspect * scale, aspect * scale, scale, -scale, -1000, 1000);
 
     Timer_t timer = MakeTimer();
 
@@ -251,12 +250,15 @@ int main(int argc, char* argv[])
 
         RenderSprites(&renderer, scene);
 
-        Renderer2D_BeginScene(&renderer, mat4x4x4_Mul(cam->proj, *cam_tr));
+        cam_tr = Scene_Get(scene, came, Component_TRANSFORM);
+        *cam_tr = *(mat4*)Scene_Get(scene, e, Component_TRANSFORM);
+
+        Renderer2D_BeginScene(&renderer, mat4x4x4_Mul(cam->proj, mat4_Inverse(*cam_tr)));
         
         vec2 camPos = new_vec2_v4(mat4x4_Mul_v(*cam_tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
         for (float x = camPos.x - aspect * scale; x < camPos.x + aspect * scale; x++)
         {
-            float x_ = floorf(x / 10.f) * 10.f;
+            float x_ = floorf(x / 5.f) * 5.f;
             Renderer2D_DrawLine(&renderer,
                 new_vec3(x_, camPos.y + scale, -1.f),
                 new_vec3(x_, camPos.y - scale, -1.f),
@@ -266,7 +268,7 @@ int main(int argc, char* argv[])
         
         for (float y = camPos.y - scale; y < camPos.y + scale; y++)
         {
-            float y_ = floorf(y / 10.f) * 10.f;
+            float y_ = floorf(y / 5.f) * 5.f;
             Renderer2D_DrawLine(&renderer,
                 new_vec3(camPos.x + aspect * scale, y_, -1.f),
                 new_vec3(camPos.x - aspect * scale, y_, -1.f),

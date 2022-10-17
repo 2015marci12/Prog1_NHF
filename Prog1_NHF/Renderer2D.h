@@ -67,7 +67,10 @@ void Renderer2D_EndScene(Renderer2D* inst);
 void Renderer2D_Clear(Renderer2D* inst, vec4 color);
 void Renderer2D_SetLineWidth(Renderer2D* inst, float width);
 
-void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec2 size, vec4 color, GLTexture* texture, Rect texrect);
+void Renderer2D_DrawQuad(Renderer2D* inst, vec3 pos, vec2 size, vec4 color, GLTexture* texture, Rect texrect);
+void Renderer2D_DrawRotatedQuad(Renderer2D* inst, vec3 pos, vec2 size, float rotation, vec4 color, GLTexture* texture, Rect texrect);
+void Renderer2D_DrawRotatedQuad_s(Renderer2D* inst, vec3 pos, vec2 size, float rotation, vec4 color, SubTexture subtex);
+void Renderer2D_DrawQuad_t(Renderer2D* inst, mat4 transform, vec2 size, vec4 color, GLTexture* texture, Rect texrect);
 void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec2 size, vec4 tint, SubTexture subtex);
 
 void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color);

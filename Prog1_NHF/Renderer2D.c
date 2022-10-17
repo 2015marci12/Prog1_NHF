@@ -289,7 +289,84 @@ void Renderer2D_SetLineWidth(Renderer2D* inst, float width)
 	inst->lineWidth = width;
 }
 
-void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec2 size, vec4 color, GLTexture* texture, Rect texrect)
+void Renderer2D_DrawQuad(Renderer2D* inst, vec3 pos, vec2 size, vec4 color, GLTexture* texture, Rect texrect)
+{
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
+
+	const vec4 quadVertexPos[] =
+	{
+		new_vec4(-0.5f, -0.5f, 0, 1.f),
+		new_vec4(-0.5f, 0.5f, 0, 1.f),
+		new_vec4(0.5f, 0.5f, 0, 1.f),
+		new_vec4(0.5f, -0.5f, 0, 1.f)
+	};
+
+	const vec2 texCoords[] =
+	{
+		texrect.Pos,
+		vec2_Add(texrect.Pos, new_vec2(texrect.Size.x, 0)),
+		vec2_Add(texrect.Pos, texrect.Size),
+		vec2_Add(texrect.Pos, new_vec2(0, texrect.Size.y)),
+	};
+
+	if (inst->quadCount + 1 >= MAX_QUADS) Renderer2D_NextBatch(inst);
+	int texInd = Renderer2D_AddTexture(inst, texture);
+
+	for (int i = 0; i < 4; i++)
+	{
+		QuadVertex* v = inst->quadHead;
+		vec4 temp = vec4_Add(new_vec4_v3(pos, 1.f), vec4_Mul(quadVertexPos[i], new_vec4_v2(size, 0.f, 1.f)));
+		v->Pos = new_vec3_v4(temp);
+		v->Tex = (float)texInd;
+		v->Col = color;
+		v->tUV = texCoords[i];
+		inst->quadHead++;
+	}
+	inst->quadCount++;
+}
+
+void Renderer2D_DrawRotatedQuad(Renderer2D* inst, vec3 pos, vec2 size, float rotation, vec4 color, GLTexture* texture, Rect texrect)
+{
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
+
+	const vec4 quadVertexPos[] =
+	{
+		new_vec4_v2(vec2_Rot(new_vec2(-0.5f, -0.5f), rotation), 0, 1.f),
+		new_vec4_v2(vec2_Rot(new_vec2(-0.5f, 0.5f), rotation), 0, 1.f),
+		new_vec4_v2(vec2_Rot(new_vec2(0.5f, 0.5f), rotation), 0, 1.f),
+		new_vec4_v2(vec2_Rot(new_vec2(0.5f, -0.5f), rotation), 0, 1.f)
+	};
+
+	const vec2 texCoords[] =
+	{
+		texrect.Pos,
+		vec2_Add(texrect.Pos, new_vec2(texrect.Size.x, 0)),
+		vec2_Add(texrect.Pos, texrect.Size),
+		vec2_Add(texrect.Pos, new_vec2(0, texrect.Size.y)),
+	};
+
+	if (inst->quadCount + 1 >= MAX_QUADS) Renderer2D_NextBatch(inst);
+	int texInd = Renderer2D_AddTexture(inst, texture);
+
+	for (int i = 0; i < 4; i++)
+	{
+		QuadVertex* v = inst->quadHead;
+		vec4 temp = vec4_Add(new_vec4_v3(pos, 1.f), vec4_Mul(quadVertexPos[i], new_vec4_v2(size, 0.f, 1.f)));
+		v->Pos = new_vec3_v4(temp);
+		v->Tex = (float)texInd;
+		v->Col = color;
+		v->tUV = texCoords[i];
+		inst->quadHead++;
+	}
+	inst->quadCount++;
+}
+
+void Renderer2D_DrawRotatedQuad_s(Renderer2D* inst, vec3 pos, vec2 size, float rotation, vec4 color, SubTexture subtex)
+{
+	Renderer2D_DrawRotatedQuad(inst, pos, size, rotation, color, subtex.texture, subtex.texRect);
+}
+
+void Renderer2D_DrawQuad_t(Renderer2D* inst, mat4 transform, vec2 size, vec4 color, GLTexture* texture, Rect texrect)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
 
@@ -327,7 +404,7 @@ void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec2 size, vec4 color
 
 void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec2 size, vec4 tint, SubTexture subtex)
 {
-	Renderer2D_DrawQuad(inst, transform, size, tint, subtex.texture, subtex.texRect);
+	Renderer2D_DrawQuad_t(inst, transform, size, tint, subtex.texture, subtex.texRect);
 }
 
 void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color)
