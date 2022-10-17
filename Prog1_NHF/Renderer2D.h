@@ -40,12 +40,10 @@ typedef struct Renderer2D
 	GLTexture* textures[MAX_TEXTURES];
 
 	//Quad vertex data.
-	QuadVertex* quadBase;
 	QuadVertex* quadHead;
 	uint32_t quadCount;
 
 	//Lines.
-	LineVertex* lineBase;
 	LineVertex* lineHead;
 	uint32_t lineCount;
 	float lineWidth;

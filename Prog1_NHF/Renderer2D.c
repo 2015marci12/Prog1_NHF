@@ -9,7 +9,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		*/
 
 		//Create buffers.
-		inst->quadVBO = GLBuffer_Create(MAX_QUADS * 4 * sizeof(QuadVertex), GLBufferFlags_STREAM, NULL);
+		inst->quadVBO = GLBuffer_Create(MAX_QUADS * 4 * sizeof(QuadVertex), GLBufferFlags_NONE, NULL);
 		inst->quadIBO = GLBuffer_Create(MAX_QUADS * 6 * sizeof(uint32_t), GLBufferFlags_NONE, NULL);
 
 		//Fill index buffer with the predictable indices.
@@ -24,8 +24,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 			iboPtr[i + 5] = i + 0;
 		};
 		GLBuffer_EndWriteRange(inst->quadIBO);
-		//Get the pointer to the persistently mapped vbo.
-		inst->quadBase = GLBuffer_BeginWriteRange(inst->quadVBO, 0, inst->quadVBO->Size);
+		inst->quadHead = NULL;
 
 		//Setup vertex attributes.
 		vertexAttribute_t attribs[] =
@@ -55,10 +54,10 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	gl_Position = MVP * vec4(Pos, 1);\n"
 			"	vCol = Col;\n"
 			"	vtUV = tUV;\n"
 			"	vTex = Tex;\n"
+			"	gl_Position = MVP * vec4(Pos, 1.0);\n"
 			"}\n";
 		const char fragmentsource[] =
 			"#version 450 core\n"
@@ -93,9 +92,8 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		* Lines.
 		*/
 
-		inst->lineVBO = GLBuffer_Create(MAX_LINES * 2 * sizeof(LineVertex), GLBufferFlags_STREAM, NULL);
-		inst->lineBase = GLBuffer_BeginWriteRange(inst->lineVBO, 0, inst->lineVBO->Size);
-		inst->lineHead = inst->lineBase;
+		inst->lineVBO = GLBuffer_Create(MAX_LINES * 2 * sizeof(LineVertex), GLBufferFlags_NONE, NULL);
+		inst->lineHead = NULL;
 
 		vertexAttribute_t lineAttribs[] =
 		{
@@ -117,8 +115,8 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	gl_Position = MVP * vec4(Pos, 1);\n"
 			"	vCol = Col;\n"
+			"	gl_Position = MVP * vec4(Pos, 1.0);\n"
 			"}\n";
 		const char linefragmentsource[] =
 			"#version 450 core\n"
@@ -177,11 +175,11 @@ void Renderer2D_BeginBatch(Renderer2D* inst)
 
 		//Reset vertex data.
 		inst->quadCount = 0;
-		inst->quadHead = inst->quadBase;
+		inst->quadHead = GLBuffer_BeginWriteRange(inst->quadVBO, 0, inst->quadVBO->Size);;
 
 		//Reset lines.
 		inst->lineCount = 0;
-		inst->lineHead = inst->lineBase;
+		inst->lineHead = GLBuffer_BeginWriteRange(inst->lineVBO, 0, inst->lineVBO->Size);
 	}
 }
 
@@ -189,6 +187,11 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 {
 	if (inst)
 	{
+		inst->lineHead = NULL;
+		GLBuffer_EndWriteRange(inst->lineVBO);
+		inst->quadHead = NULL;
+		GLBuffer_EndWriteRange(inst->quadVBO);		
+
 		//Setup render state.
 
 		//Blending.
@@ -262,8 +265,7 @@ void Renderer2D_BeginScene(Renderer2D* inst, mat4 camera)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
 
-	if (inst->quadCount > 0) Renderer2D_NextBatch(inst);
-	else Renderer2D_BeginBatch(inst);
+	Renderer2D_BeginBatch(inst);
 
 	inst->Camera = camera;
 }
@@ -293,10 +295,10 @@ void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec2 size, vec4 color
 
 	const vec4 quadVertexPos[] =
 	{
-		new_vec4(-0.5f, -0.5f, 0, 0),
-		new_vec4(-0.5f, 0.5f, 0, 0),
-		new_vec4(0.5f, 0.5f, 0, 0),
-		new_vec4(0.5f, -0.5f, 0, 0)
+		new_vec4(-0.5f, -0.5f, 0, 1.f),
+		new_vec4(-0.5f, 0.5f, 0, 1.f),
+		new_vec4(0.5f, 0.5f, 0, 1.f),
+		new_vec4(0.5f, -0.5f, 0, 1.f)
 	};
 
 	const vec2 texCoords[] =
@@ -307,14 +309,14 @@ void Renderer2D_DrawQuad(Renderer2D* inst, mat4 transform, vec2 size, vec4 color
 		vec2_Add(texrect.Pos, new_vec2(0, texrect.Size.y)),
 	};
 
+	if (inst->quadCount + 1 >= MAX_QUADS) Renderer2D_NextBatch(inst);
 	int texInd = Renderer2D_AddTexture(inst, texture);
-	if (inst->quadCount + 1 >= MAX_QUADS) Renderer2D_BeginBatch(inst);
 
 	for (int i = 0; i < 4; i++)
 	{
 		QuadVertex* v = inst->quadHead;
-		vec4 temp = mat4x4_Mul_v(transform, vec4_Mul(quadVertexPos[i], new_vec4_v2(size, 0.f, 0.f)));
-		v->Pos = new_vec3(temp.x, temp.y, temp.z);
+		vec4 temp = mat4x4_Mul_v(transform, vec4_Mul(quadVertexPos[i], new_vec4_v2(size, 0.f, 1.f)));
+		v->Pos = new_vec3_v4(temp);
 		v->Tex = (float)texInd;
 		v->Col = color;
 		v->tUV = texCoords[i];
@@ -331,7 +333,7 @@ void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec2 size, vec4 tin
 void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
-	if (inst->lineCount + 1 >= MAX_LINES) Renderer2D_BeginBatch(inst);
+	if (inst->lineCount + 1 >= MAX_LINES) Renderer2D_NextBatch(inst);
 
 	LineVertex* v = inst->lineHead;
 	v->Pos = a;
@@ -366,10 +368,10 @@ void Renderer2D_DrawRect_t(Renderer2D* inst, mat4 transform, Rect rect, float z,
 {
 	vec4 points[4] =
 	{
-		new_vec4_v2(rect.Pos, z, 0.f),
-		new_vec4_v2(new_vec2(rect.x + rect.w, rect.y), z, 0.f),
-		new_vec4_v2(new_vec2(rect.x + rect.w, rect.y + rect.h), z, 0.f),
-		new_vec4_v2(new_vec2(rect.x, rect.y + rect.h), z, 0.f),
+		new_vec4_v2(rect.Pos, z, 1.f),
+		new_vec4_v2(new_vec2(rect.x + rect.w, rect.y), z, 1.f),
+		new_vec4_v2(new_vec2(rect.x + rect.w, rect.y + rect.h), z, 1.f),
+		new_vec4_v2(new_vec2(rect.x, rect.y + rect.h), z, 1.f),
 	};
 
 	for (int i = 0; i < 4; i++) points[i] = mat4x4_Mul_v(transform, points[i]);

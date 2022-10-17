@@ -161,48 +161,48 @@ vecConversions(i, int32_t, u, uint32_t)
 
 
 //Matrix operations.
-#define matOps(prefix, cols, rows, mat_t, scal_t) \
-static mat_t prefix ## mat ## cols ## x ## rows ## _Add(mat_t a, mat_t b) \
+#define matOps(prefix, rows, cols, mat_t, scal_t) \
+static mat_t prefix ## mat ## rows ## x ## cols ## _Add(mat_t a, mat_t b) \
 { \
     for(int x = 0; x < cols; x++) \
         for(int y = 0; y < rows; y++) \
         a.col[x].comp[y] += b.col[x].comp[y]; \
     return a; \
 }  \
-static mat_t prefix ## mat ## cols ## x ## rows ## _Mul_s(mat_t a, scal_t b) \
+static mat_t prefix ## mat ## rows ## x ## cols ## _Mul_s(mat_t a, scal_t b) \
 { \
     for(int x = 0; x < cols; x++) \
         for(int y = 0; y < rows; y++) \
             a.col[x].comp[y] *= b; \
     return a; \
 } \
-static mat_t prefix ## mat ## cols ## x ## rows ## _s_Mul(scal_t b, mat_t a) \
+static mat_t prefix ## mat ## rows ## x ## cols ## _s_Mul(scal_t b, mat_t a) \
 { \
     for(int x = 0; x < cols; x++) \
         for(int y = 0; y < rows; y++) \
             a.col[x].comp[y] *= b; \
     return a; \
 } \
-static prefix ## vec ## cols prefix ## mat ## cols ## x ## rows ## _Mul_v(mat_t a, prefix ## vec ## rows b) \
+static prefix ## vec ## rows prefix ## mat ## rows ## x ## cols ## _Mul_v(mat_t a, prefix ## vec ## cols b) \
 { \
-    prefix ## vec ## cols ret; \
-    for(int x = 0; x < cols; x++) \
+    prefix ## vec ## rows ret; \
+    for(int x = 0; x < rows; x++) ret.comp[x] = 0.f; \
+    for(int x = 0; x < rows; x++) \
     { \
-        ret.comp[x] = 0; \
-        for(int y = 0; y < rows; y++) \
-            ret.comp[x] += a.col[x].comp[y] * b.comp[y]; \
+        for(int y = 0; y < cols; y++) \
+            ret.comp[x] += a.col[y].comp[x] * b.comp[y]; \
     } \
     return ret; \
 }  \
-static prefix ## mat ## rows ## x ## cols prefix ## mat ## cols ## x ## rows ## _Transpose(mat_t a) \
+static prefix ## mat ## cols ## x ## rows prefix ## mat ## rows ## x ## cols ## _Transpose(prefix ## mat ## rows ## x ## cols a) \
 { \
-    prefix ## mat ## rows ## x ## cols ret; \
+    prefix ## mat ## cols ## x ## rows ret; \
     for(int x = 0; x < cols; x++) \
         for(int y = 0; y < rows; y++) \
             ret.col[y].comp[x] = a.col[x].comp[y]; \
     return ret; \
 } \
-static mat_t prefix ## mat ## cols ## x ## rows ## _Identity() \
+static mat_t prefix ## mat ## rows ## x ## cols ## _Identity() \
 { \
     mat_t ret; \
     for(int x = 0; x < cols; x++) \
@@ -212,23 +212,19 @@ static mat_t prefix ## mat ## cols ## x ## rows ## _Identity() \
 }
 
 //Matrix definition. Column major.
-#define matDef(prefix, cols, rows, scal_t)   \
-typedef struct prefix ## mat ## cols ## x ## rows  \
+#define matDef(prefix, rows, cols, scal_t)   \
+typedef struct prefix ## mat ## rows ## x ## cols  \
 {   \
     prefix ## vec ## rows col[cols];    \
-} prefix ## mat ## cols ## x ## rows;  
+} prefix ## mat ## rows ## x ## cols;  
 
 //Matrix multiplication for each valid combination.
 #define matMul(prefix, m, n, p) \
 static prefix ## mat ## m ## x ## p prefix ## mat ## m ## x ## n ## x ## p ## _Mul(prefix ## mat ## m ## x ## n a, prefix ## mat ## n ## x ## p b) \
 { \
     prefix ## mat ## m ## x ## p ret; \
-    for(int i = 0; i < m; i++) \
-        for(int j = 0; j < p; j++) \
-        { \
-            ret.col[i].comp[j] = 0; \
-            for(int r = 0; r < n; r++) ret.col[i].comp[j] += a.col[i].comp[r] * b.col[r].comp[j]; \
-        }; \
+    for(int i = 0; i < p; i++) \
+        ret.col[i] = prefix ## mat ## m ## x ## n ## _Mul_v(a, b.col[i]); \
     return ret; \
 }
 
@@ -445,8 +441,8 @@ static bool Rect_Intersects(Rect a, Rect b, vec2* n, float* p)
     if (n) 
     {
         bool normalalongx = overlap.x > overlap.y;
-        (*n).x = ((float)!!normalalongx) * (diff.x / absf(diff.x));
-        (*n).y = ((float)!!(!normalalongx)) * (diff.y / absf(diff.y));
+        (*n).x = ((float)!!normalalongx) * (diff.x / fabsf(diff.x));
+        (*n).y = ((float)!!(!normalalongx)) * (diff.y / fabsf(diff.y));
     }
 
     return (overlap.x > 0 || overlap.y > 0); //Whether the 2 intersect.

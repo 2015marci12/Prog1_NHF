@@ -51,7 +51,7 @@ MessageCallback(GLenum source,
 void GLEnableDebugOutput()
 {
 	glDebugMessageCallback((GLDEBUGPROC)MessageCallback, 0);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glEnable(GL_DEBUG_OUTPUT);
 }
 
 GLBuffer* GLBuffer_Create(size_t size, GLBufferFlags flags, const void* Init_Data)
@@ -126,7 +126,7 @@ void* GLBuffer_BeginWriteRange(GLBuffer* ptr, ptrdiff_t offset, size_t size)
 void GLBuffer_EndWriteRange(GLBuffer* ptr) 
 {
 	if (!ptr) return;
-
+	if (ptr->flags & GLBufferFlags_STREAM) return;
 	glUnmapNamedBuffer(ptr->_Priv.NativeHandle);
 }
 

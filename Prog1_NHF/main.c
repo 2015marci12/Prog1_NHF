@@ -36,13 +36,15 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
     //pre-create view to cache storages.
     View_t sprites = View_Create(scene, 2, Component_TRANSFORM, Component_SPRITE);
 
+    int count = 0;
+
     //For each entity with a camera (usually only one)
     for (View_t cameras = View_Create(scene, 2, Component_CAMERA, Component_TRANSFORM); !View_End(&cameras); View_Next(&cameras)) 
     {
         Camera* cam = View_GetComponent(&cameras, 0);
         mat4* cam_t = View_GetComponent(&cameras, 1);
 
-        Renderer2D_BeginScene(renderer, mat4x4x4_Mul(*cam_t, cam->proj));
+        Renderer2D_BeginScene(renderer, mat4x4x4_Mul(cam->proj, *cam_t));
 
         //Render each renderable.
         for (View_Reset(&sprites); !View_End(&sprites); View_Next(&sprites)) 
@@ -57,6 +59,7 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
         }
 
         Renderer2D_EndScene(renderer);
+        count++;
     }
 }
 
@@ -92,10 +95,10 @@ void UpdatePlayer(Scene_t* scene, float dt)
     InputSnapshot_t input = GetInput();
 
     vec2 inputDir = new_vec2_v(0.f);
-    if (IsKeyPressed(&input, SDL_SCANCODE_W)) inputDir = vec2_Add(inputDir, new_vec2(0.f, 1.f, 0.f));
-    if (IsKeyPressed(&input, SDL_SCANCODE_S)) inputDir = vec2_Add(inputDir, new_vec2(0.f, -1.f, 0.f));
-    if (IsKeyPressed(&input, SDL_SCANCODE_D)) inputDir = vec2_Add(inputDir, new_vec2(1.f, 0.f, 0.f));
-    if (IsKeyPressed(&input, SDL_SCANCODE_A)) inputDir = vec2_Add(inputDir, new_vec2(-1.f, 0.f, 0.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_W)) inputDir = vec2_Add(inputDir, new_vec2(0.f, 1.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_S)) inputDir = vec2_Add(inputDir, new_vec2(0.f, -1.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_D)) inputDir = vec2_Add(inputDir, new_vec2(1.f, 0.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_A)) inputDir = vec2_Add(inputDir, new_vec2(-1.f, 0.f));
     inputDir = vec2_Normalize(inputDir);
 
     float Elapsed = GetElapsedSeconds(pc->timeSinceStateChange);
@@ -161,7 +164,6 @@ void UpdatePlayer(Scene_t* scene, float dt)
         }
         break;
     }
-
 }
 
 int main(int argc, char* argv[])
@@ -174,12 +176,13 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+
     SDL_Window* window = SDL_CreateWindow("SDL peldaprogram", 
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-        1920, 1080,
+        880, 640,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
     if (window == NULL)
     {
@@ -218,7 +221,7 @@ int main(int argc, char* argv[])
     Sprite* s = Scene_AddComponent(scene, e, Component_SPRITE);
     PlayerComponent* pc = Scene_AddComponent(scene, e, Component_PLAYER);
 
-    *tr = mat4x4_Identity();
+    *tr = mat4x4_Identity(), new_vec3_v(-1.f);;
     s->subTex = SubTexture_empty();
     s->tintColor = new_vec4(0.f, 0.5f, 1.f, 1.f);
     s->size = new_vec2_v(1.f);
@@ -227,8 +230,8 @@ int main(int argc, char* argv[])
     pc->timeSinceStateChange = MakeTimer();
 
     entity_t came = Scene_CreateEntity(scene);
-    mat4* cam_tr = Scene_AddComponent(scene, e, Component_TRANSFORM);
-    Camera* cam = Scene_AddComponent(scene, e, Component_CAMERA);
+    mat4* cam_tr = Scene_AddComponent(scene, came, Component_TRANSFORM);
+    Camera* cam = Scene_AddComponent(scene, came, Component_CAMERA);
     *cam_tr = mat4x4_Identity();
     float scale = 10.f;
     cam->proj = mat4_ortho(-aspect * scale, aspect * scale, scale, -scale, -1000, 1000);
@@ -247,6 +250,31 @@ int main(int argc, char* argv[])
         Renderer2D_Clear(&renderer, new_vec4_v(0.f));
 
         RenderSprites(&renderer, scene);
+
+        Renderer2D_BeginScene(&renderer, mat4x4x4_Mul(cam->proj, *cam_tr));
+        
+        vec2 camPos = new_vec2_v4(mat4x4_Mul_v(*cam_tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
+        for (float x = camPos.x - aspect * scale; x < camPos.x + aspect * scale; x++)
+        {
+            float x_ = floorf(x / 10.f) * 10.f;
+            Renderer2D_DrawLine(&renderer,
+                new_vec3(x_, camPos.y + scale, -1.f),
+                new_vec3(x_, camPos.y - scale, -1.f),
+                new_vec4_v(1.f)
+            );
+        }
+        
+        for (float y = camPos.y - scale; y < camPos.y + scale; y++)
+        {
+            float y_ = floorf(y / 10.f) * 10.f;
+            Renderer2D_DrawLine(&renderer,
+                new_vec3(camPos.x + aspect * scale, y_, -1.f),
+                new_vec3(camPos.x - aspect * scale, y_, -1.f),
+                new_vec4_v(1.f)
+            );
+        }
+        
+        Renderer2D_EndScene(&renderer);
 
         SDL_GL_SwapWindow(window);
         /* SDL_RenderPresent(renderer); - MacOS Mojave esetén */
