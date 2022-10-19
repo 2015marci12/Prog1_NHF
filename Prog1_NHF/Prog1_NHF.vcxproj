@@ -26,6 +26,7 @@
     <ClCompile Include="Input.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="PoolAllocator.c" />
+    <ClCompile Include="Random.c" />
     <ClCompile Include="Renderer2D.c" />
     <ClCompile Include="Timer.c" />
   </ItemGroup>
@@ -34,6 +35,7 @@
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="debugmalloc.h" />
+    <ClInclude Include="DungeonGen.h" />
     <ClInclude Include="ECS.h" />
     <ClInclude Include="GL\Buffer.h" />
     <ClInclude Include="Graphics.h" />
@@ -42,6 +44,7 @@
     <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
     <ClInclude Include="PoolAllocator.h" />
+    <ClInclude Include="Random.h" />
     <ClInclude Include="Renderer2D.h" />
     <ClInclude Include="Timer.h" />
   </ItemGroup>
