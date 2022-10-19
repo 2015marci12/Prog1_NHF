@@ -25,6 +25,7 @@ typedef struct Sprite
     vec4 tintColor;
     vec2 size;
     SubTexture subTex;
+    SubTexture overlays[5];
 } Sprite;
 
 typedef struct Camera 
@@ -54,9 +55,14 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
             Sprite* sprite = View_GetComponent(&sprites, 1);
 
             Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
-            vec3 null = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-            vec3 forward = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-            Renderer2D_DrawLine(renderer, null, forward, new_vec4(0.f, 1.f, 0.f, 1.f));
+            for (int i = 0; i < 5; i++) 
+            {
+                if (sprite->overlays[i].texture != NULL) 
+                {
+                    mat4 tr = mat4_Translate(*transform, new_vec3(0.f, 0.f, i * 0.01f));
+                    Renderer2D_DrawSprite(renderer, tr, sprite->size, sprite->tintColor, sprite->overlays[i]);
+                }
+            }
         }
 
         Renderer2D_EndScene(renderer);
@@ -66,9 +72,7 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
 
 typedef struct PlayerComponent 
 {
-    vec2 Direction;
-    Timer_t timeSinceStateChange;
-    Timer_t LastDash;
+    float fuel;
 } PlayerComponent;
 
 typedef struct PlaneMovementComponent 
@@ -82,12 +86,13 @@ typedef struct PlaneMovementComponent
 
 const float g = 5.f;
 const float thrust_idle = 13.f;
-const float thrust_booster = 20.f;
-const float lift_coeff = 2.f;
+const float thrust_booster = 25.f;
+const float lift_coeff = 1.1f;
 const float drag_coeff = 0.1f;
 const float plane_mass = 1.f;
+const float booster_fuelconsumption = 0.1f;
 
-void MovePlanes(Scene_t* scene, float dt)
+void MovePlanes(Scene_t* scene, float dt, Renderer2D* renderer)
 {
     for (View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_PLANE); !View_End(&view); View_Next(&view)) 
     {
@@ -101,31 +106,51 @@ void MovePlanes(Scene_t* scene, float dt)
         float vel = vec2_Len(plane->velocity);
 
         float dirAngle = vec2_Angle(direction);
-
         float velAngle = vec2_Angle(velocitynormal);
-        float aoa = max(0.01f, min(1.f, (dirAngle - velAngle)));
 
-        vec2 aeroforce = vec2_Mul_s(velocitynormal, -1.f * (1.f + aoa) * plane->dragcoeff * (vel * vel));
-        vec2 thrustforce = vec2_Mul_s(direction, plane->thrust);
-        vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), g);   
+        //Angle differernce.
+        float anglediff = dirAngle - velAngle;
+        anglediff += (anglediff > PI) ? -(PI * 2.f) : (anglediff < -PI) ? (PI * 2.f) : 0;
+        float aoa = max(-1.f, min(1.f, (anglediff))); //aoa restricted between [-1, 1]
 
-        vec2 lift = vec2_Mul_s(new_vec2(0.f, 1.f), fabsf(plane->velocity.x) * aoa * plane->liftcoeff);
-        TRACE("lift : %f\n", lift.y);
+        vec2 aeroforce = vec2_Mul_s(velocitynormal, -1.f * (0.5f + fabsf(aoa)) * plane->dragcoeff * (vel * vel)); //drag.
+        vec2 thrustforce = vec2_Mul_s(direction, plane->thrust); //thrust.
+        vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), g * plane->mass); //gravity.
 
+        //Lift.
+        vec2 lift = vec2_Rot(new_vec2(0.f, vel * aoa * plane->liftcoeff), velAngle);
+        //Adjust for straight flying.
+        lift = vec2_Add(lift, new_vec2(0.f, fabsf(plane->velocity.x) / 5.f * plane->liftcoeff));
+
+        //Sum forces and divide by mass.
         vec2 accel = vec2_Div_s(vec2_Add(vec2_Add(vec2_Add(aeroforce, thrustforce), gravity), lift), plane->mass);
+
+        //move.
         *transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), vec3_Add(pos, new_vec3_v2(vec2_Mul_s(plane->velocity, dt), 0.f))), dirAngle, new_vec3(0.f, 0.f, 1.f));
+        
+        //Apply acceleration.
         plane->velocity = vec2_Add(plane->velocity, vec2_Mul_s(accel, dt));
+
+        if (fabsf(velAngle) > PI / 2.f) *transform = mat4_Scale(*transform, new_vec3(1.f, -1.f, 1.f)); //Invert sprite if the velocity is facing the other way.
     }
 }
 
 SDL_Window* window;
 
+GLTexture* tex;
+TextureAtlas atlas;
+SubTexture planeTex;
+Animation boosterAnim;
+Animation cannonAnim;
+
 void UpdatePlayer(Scene_t* scene, float dt)
 {
-    View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_PLAYER, Component_PLANE);
+    View_t view = View_Create(scene, 4, Component_TRANSFORM, Component_PLAYER, Component_PLANE, Component_SPRITE);
     InputSnapshot_t input = GetInput();
 
     mat4* transform = View_GetComponent(&view, 0);
+    PlaneMovementComponent* pm = View_GetComponent(&view, 2);
+    Sprite* sprite = View_GetComponent(&view, 3);
 
     vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
     ivec2 screenSize;
@@ -134,9 +159,38 @@ void UpdatePlayer(Scene_t* scene, float dt)
     ivec2 screenCenter = ivec2_Div_s(screenSize, 2);
     vec2 mouseDiff = ivec2_to_vec2(ivec2_Sub(mousePos, screenCenter));
     mouseDiff.y *= -1.f;
+
+    //Look at mouse.
     float angle = vec2_Angle(mouseDiff);
-    TRACE("%f\n", angle);
-    *transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), Pos), angle, new_vec3(0.f, 0.f, 1.f));
+    *transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), Pos), angle, new_vec3(0.f, 0.f, 1.f)); 
+
+    //scale thrust.
+    float thrust = thrust_idle;
+    thrust *= max(0.f, min(vec2_Len(mouseDiff) / (float)ivec2_Min(screenCenter), 1.f));
+    if (IsKeyPressed(&input, SDL_SCANCODE_SPACE)) 
+    {
+        thrust = thrust_booster;
+        //Booster animation.
+        Timer_t timer = { 0 };
+        sprite->overlays[0] = Animation_GetAt(&boosterAnim, GetElapsedSeconds(timer), NULL);
+    }
+    else 
+    {
+        sprite->overlays[0] = SubTexture_empty();
+    }
+    pm->thrust = thrust;
+
+    //shooting.
+    if (IsMouseButtonPressed(&input, SDL_BUTTON_LEFT)) 
+    {
+        //cannon animation.
+        Timer_t timer = { 0 };
+        sprite->overlays[1] = Animation_GetAt(&cannonAnim, GetElapsedSeconds(timer), NULL);
+    }
+    else 
+    {
+        sprite->overlays[1] = SubTexture_empty();
+    }
 }
 
 int main(int argc, char* argv[])
@@ -169,6 +223,22 @@ int main(int argc, char* argv[])
 
     //GLEnableDebugOutput();
 
+    tex = LoadTex2D("jet.png");
+    atlas = TextureAtlas_create(tex, new_uvec2(64, 32));
+    planeTex = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 3), new_uvec2(1, 1));
+
+    boosterAnim.frameCount = 3;
+    boosterAnim.frameTime = 0.16f;
+    boosterAnim.frames[0] = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 1), new_uvec2(1, 1));
+    boosterAnim.frames[1] = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 0), new_uvec2(1, 1));
+    boosterAnim.frames[2] = TextureAtlas_SubTexture(&atlas, new_uvec2(1, 1), new_uvec2(1, 1));
+
+    cannonAnim.frameCount = 3;
+    cannonAnim.frameTime = 0.08f;
+    cannonAnim.frames[0] = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 2), new_uvec2(1, 1));
+    cannonAnim.frames[2] = TextureAtlas_SubTexture(&atlas, new_uvec2(1, 3), new_uvec2(1, 1));
+    cannonAnim.frames[3] = SubTexture_empty();
+
     //Add components.
     Scene_t* scene = Scene_New();
     ComponentInfo_t transformInfo = COMPONENT_DEF(Component_TRANSFORM, mat4);
@@ -198,11 +268,11 @@ int main(int argc, char* argv[])
     PlaneMovementComponent* pm = Scene_AddComponent(scene, e, Component_PLANE);
 
     *tr = mat4x4_Identity(), new_vec3_v(-1.f);;
-    s->subTex = SubTexture_empty();
-    s->tintColor = new_vec4(0.f, 0.5f, 1.f, 1.f);
-    s->size = new_vec2_v(1.f);
-    pc->timeSinceStateChange = MakeTimer();
-    PlaneMovementComponent temp = { new_vec2_v(0.f), lift_coeff, drag_coeff, thrust_idle, plane_mass };
+    s->subTex = planeTex;
+    s->tintColor = new_vec4_v(1.f);
+    s->size = new_vec2(2.f, 1.0f);
+    for(int i = 0; i < 5; i++) s->overlays[i] = SubTexture_empty();
+    PlaneMovementComponent temp = { new_vec2_v(0.f), lift_coeff, drag_coeff, thrust_booster, plane_mass };
     *pm = temp;
 
     entity_t came = Scene_CreateEntity(scene);
@@ -215,16 +285,21 @@ int main(int argc, char* argv[])
     Timer_t timer = MakeTimer();
 
     SDL_Event ev;
-    while (!(SDL_PollEvent(&ev) && ev.type == SDL_QUIT)) 
+    bool exit = false;
+    while (!exit) 
     {
+        while (SDL_PollEvent(&ev)) 
+        {
+            exit |= ev.type == SDL_QUIT;
+        }
 
         float timediff = GetElapsedSeconds(timer);
         timer = MakeTimer();
 
-        UpdatePlayer(scene, timediff);
-        MovePlanes(scene, timediff);
-
         Renderer2D_Clear(&renderer, new_vec4_v(0.f));
+
+        UpdatePlayer(scene, timediff);
+        MovePlanes(scene, timediff, &renderer);
 
         RenderSprites(&renderer, scene);
 
@@ -265,6 +340,7 @@ int main(int argc, char* argv[])
     }
 
     Scene_Delete(scene);
+    GLTexture_Destroy(tex);
     Renderer2D_Destroy(&renderer);
     SDL_GL_DeleteContext(glcontext);
     SDL_Quit();

@@ -189,3 +189,9 @@ void GLTexture_Destroy(GLTexture* ptr);
 
 void GLTexture_Upload(GLTexture* ptr, uint32_t level, GLFormat pixelFormat, uvec3 offset, uvec3 size, const void* data);
 void GLTexture_BindUnit(GLTexture* ptr, uint32_t unit);
+
+/*
+* Utility funtions.
+*/
+
+GLTexture* LoadTex2D(const char* path);

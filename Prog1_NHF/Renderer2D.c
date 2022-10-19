@@ -14,14 +14,15 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 
 		//Fill index buffer with the predictable indices.
 		uint32_t* iboPtr = GLBuffer_BeginWriteRange(inst->quadIBO, 0, inst->quadIBO->Size);
-		for (uint32_t i = 0; i < MAX_QUADS * 6; i += 6)
+		for (uint32_t i = 0; i < MAX_QUADS * 4; i += 4)
 		{
-			iboPtr[i + 0] = i + 0;
-			iboPtr[i + 1] = i + 1;
-			iboPtr[i + 2] = i + 2;
-			iboPtr[i + 3] = i + 2;
-			iboPtr[i + 4] = i + 3;
-			iboPtr[i + 5] = i + 0;
+			iboPtr[0] = i + 0;
+			iboPtr[1] = i + 1;
+			iboPtr[2] = i + 2;
+			iboPtr[3] = i + 2;
+			iboPtr[4] = i + 3;
+			iboPtr[5] = i + 0;
+			iboPtr += 6;
 		};
 		GLBuffer_EndWriteRange(inst->quadIBO);
 		inst->quadHead = NULL;
@@ -73,6 +74,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 			"void main()\n"
 			"{\n"
 			"	oCol = vCol * texture(textures[int(vTex)], vtUV);\n"
+			"	if(!(oCol.a > 0.f)) discard;\n"
 			"}\n";
 		shaderSource_t sources[] =
 		{
@@ -196,7 +198,6 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 
 		//Blending.
 		glEnable(GL_BLEND);
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
 
 		//Depth.
 		glEnable(GL_DEPTH_TEST);
@@ -296,9 +297,9 @@ void Renderer2D_DrawQuad(Renderer2D* inst, vec3 pos, vec2 size, vec4 color, GLTe
 	const vec4 quadVertexPos[] =
 	{
 		new_vec4(-0.5f, -0.5f, 0, 1.f),
-		new_vec4(-0.5f, 0.5f, 0, 1.f),
+		new_vec4(0.5f, -0.5f, 0, 1.f),
 		new_vec4(0.5f, 0.5f, 0, 1.f),
-		new_vec4(0.5f, -0.5f, 0, 1.f)
+		new_vec4(-0.5f, 0.5f, 0, 1.f)
 	};
 
 	const vec2 texCoords[] =
@@ -332,9 +333,9 @@ void Renderer2D_DrawRotatedQuad(Renderer2D* inst, vec3 pos, vec2 size, float rot
 	const vec4 quadVertexPos[] =
 	{
 		new_vec4_v2(vec2_Rot(new_vec2(-0.5f, -0.5f), rotation), 0, 1.f),
-		new_vec4_v2(vec2_Rot(new_vec2(-0.5f, 0.5f), rotation), 0, 1.f),
+		new_vec4_v2(vec2_Rot(new_vec2(0.5f, -0.5f), rotation), 0, 1.f),
 		new_vec4_v2(vec2_Rot(new_vec2(0.5f, 0.5f), rotation), 0, 1.f),
-		new_vec4_v2(vec2_Rot(new_vec2(0.5f, -0.5f), rotation), 0, 1.f)
+		new_vec4_v2(vec2_Rot(new_vec2(-0.5f, 0.5f), rotation), 0, 1.f)
 	};
 
 	const vec2 texCoords[] =
@@ -373,9 +374,9 @@ void Renderer2D_DrawQuad_t(Renderer2D* inst, mat4 transform, vec2 size, vec4 col
 	const vec4 quadVertexPos[] =
 	{
 		new_vec4(-0.5f, -0.5f, 0, 1.f),
-		new_vec4(-0.5f, 0.5f, 0, 1.f),
+		new_vec4(0.5f, -0.5f, 0, 1.f),
 		new_vec4(0.5f, 0.5f, 0, 1.f),
-		new_vec4(0.5f, -0.5f, 0, 1.f)
+		new_vec4(-0.5f, 0.5f, 0, 1.f)
 	};
 
 	const vec2 texCoords[] =

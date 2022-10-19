@@ -22,7 +22,7 @@ typedef struct ComponentInfo_t //Runtime information about a component type.
 * The idea comes from the ENTT library by skypjack, and the implementation closely resembles
 * that of roig's destral_ecs library. Differences are:
 	-allocation behaviour
-	-the way component storages and component id-s relate to each other
+	-the way component storages and component id-s relate to each other. This implementation uses a binary tree to look up component storages.
 	-the way views iterate the most exclusive set of the component types.
 	-no entity versioning.
 */
@@ -35,8 +35,6 @@ typedef struct SparseMap_t
 	size_t dense_size;
 	size_t dense_capacity;
 } SparseMap_t;
-
-SparseMap_t;
 
 //Initialize a newly created sparse map.
 SparseMap_t* SparseMap_Init(SparseMap_t* ptr);
@@ -71,19 +69,30 @@ typedef struct ComponentStorage_t
 	void* components;
 } ComponentStorage_t;
 
+//Initialize a newly created storage.
 ComponentStorage_t* ComponentStorage_Init(ComponentStorage_t* ptr, ComponentInfo_t comp);
+//Free the resources allocated by a component storage.
 void ComponentStorage_Destroy(ComponentStorage_t* ptr);
+//Allocate a new storage on the heap.
 ComponentStorage_t* ComponentStorage_New(ComponentInfo_t comp);
+//Free a heap allocated component storage.
 void ComponentStorage_Delete(ComponentStorage_t* ptr);
 
+//Check if an entity has a component in the storage.
 bool ComponentStorage_Contains(ComponentStorage_t* ptr, entity_t entity);
+//Get the nth component in the dense storage.
 void* ComponentStorage_GetByIndex(ComponentStorage_t* ptr, size_t index);
+//Get the component associated with an entity.
 void* ComponentStorage_Get(ComponentStorage_t* ptr, entity_t entity);
 
+//Add a component and associate it with an entity.
 void* ComponentStorage_Emplace(ComponentStorage_t* ptr, entity_t entity);
+//Remove the component associated with an entity.
 void ComponentStorage_Remove(ComponentStorage_t* ptr, entity_t entity);
 
-
+/*
+* 
+*/
 typedef struct Scene_t 
 {
 	entity_t* entities;
@@ -128,4 +137,3 @@ void View_Next(View_t* ptr);
 void View_Reset(View_t* ptr);
 void* View_GetComponent(View_t* ptr, uint32_t CompIndex);
 entity_t View_GetCurrent(View_t* ptr);
-

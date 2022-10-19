@@ -42,6 +42,7 @@
     <ClInclude Include="Input.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
+    <ClInclude Include="ParticleSystem.h" />
     <ClInclude Include="PoolAllocator.h" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="Renderer2D.h" />

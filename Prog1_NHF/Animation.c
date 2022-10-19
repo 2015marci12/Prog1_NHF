@@ -7,10 +7,10 @@ TextureAtlas TextureAtlas_create(GLTexture* tex, uvec2 unit)
 		tex,
 		unit,
 		vec2_Div(
+			uvec2_to_vec2(unit),
 			uvec2_to_vec2(
 				new_uvec2_v3(tex->Size)
-			),
-			uvec2_to_vec2(unit)
+			)
 		) };
 	return ret;
 }

@@ -95,5 +95,8 @@
     <ClInclude Include="Random.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="ParticleSystem.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

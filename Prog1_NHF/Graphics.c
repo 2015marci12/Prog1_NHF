@@ -1,4 +1,6 @@
 #include "Graphics.h"
+#include "SDL2/SDL.h"
+#include "SDL2/SDL_image.h"
 
 void GLAPIENTRY
 MessageCallback(GLenum source,
@@ -372,8 +374,8 @@ GLTexture* GLTexture_Create(GLTextureType type, GLFormat format, uvec3 size, uin
 
 	glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+	glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	GLTexture temp = { type, format, size,{ tex } };
 	GLTexture* ret = malloc(sizeof(GLTexture));
@@ -427,4 +429,61 @@ void GLTexture_BindUnit(GLTexture* ptr, uint32_t unit)
 {
 	if (!ptr) return;
 	glBindTextures(unit, 1, &ptr->_Priv.NativeHandle);
+}
+
+void flip_surface(SDL_Surface* surface)
+{
+	SDL_LockSurface(surface);
+
+	int pitch = surface->pitch; // row size
+	char* temp = malloc(pitch); // intermediate buffer
+	char* pixels = (char*)surface->pixels;
+
+	for (int i = 0; i < surface->h / 2; ++i) {
+		// get pointers to the two rows to swap
+		char* row1 = pixels + i * pitch;
+		char* row2 = pixels + (surface->h - i - 1) * pitch;
+
+		// swap rows
+		memcpy(temp, row1, pitch);
+		memcpy(row1, row2, pitch);
+		memcpy(row2, temp, pitch);
+	}
+
+	free(temp);
+
+	SDL_UnlockSurface(surface);
+}
+
+
+GLTexture* LoadTex2D(const char* path)
+{
+	SDL_Surface* surface = IMG_Load(path);
+	if (!surface->pixels) { ERROR("Failed to load texture: %s\n", path); return NULL; };
+
+	int nOfColors = surface->format->BytesPerPixel;
+	uint32_t texture_format;
+	if (nOfColors == 4)     // contains an alpha channel
+	{
+		if (surface->format->Rmask == 0x000000ff)
+			texture_format = GLFormat_RGBA;
+		else
+			texture_format = GLFormat_BGRA;
+	}
+	else if (nOfColors == 3)     // no alpha channel
+	{
+		if (surface->format->Rmask == 0x000000ff)
+			texture_format = GLFormat_RGB;
+		else
+			ASSERT(false, "Unknown Pixel format!");
+	}
+	else ASSERT(false, "Unknown Pixel format!");
+
+	flip_surface(surface);
+
+	GLTexture* tex = GLTexture_Create(GLTextureType_2D, texture_format, new_uvec3(surface->w, surface->h, 1), 1);
+	GLTexture_Upload(tex, 0, texture_format, new_uvec3_v(0.f), tex->Size, surface->pixels);
+
+	SDL_FreeSurface(surface);
+	return tex;
 }
