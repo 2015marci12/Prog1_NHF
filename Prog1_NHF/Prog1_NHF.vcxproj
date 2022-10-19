@@ -35,7 +35,6 @@
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="debugmalloc.h" />
-    <ClInclude Include="DungeonGen.h" />
     <ClInclude Include="ECS.h" />
     <ClInclude Include="GL\Buffer.h" />
     <ClInclude Include="Graphics.h" />

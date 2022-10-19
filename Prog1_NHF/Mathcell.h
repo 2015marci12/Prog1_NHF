@@ -143,7 +143,7 @@ vecOps(prefix, prefix ## vec3, scal_t, 3)      \
 vecOps(prefix, prefix ## vec4, scal_t, 4)      \
                                         \
 static prefix ## vec2 prefix ## vec2_Rot(prefix ## vec2 a, float angle) { return new_ ## prefix ## vec2((scal_t)(a.x * cosf(angle) - a.y * sinf(angle)), (scal_t)(a.x * sinf(angle) + a.y * cosf(angle))); } \
-static float prefix ## vec2_Angle(prefix ## vec2 a) { return (float)atan2((double)a.x, (double)a.y); } \
+static float prefix ## vec2_Angle(prefix ## vec2 a) { return (float)atan2((double)a.y, (double)a.x); } \
 static prefix ## vec3 prefix ## vec3_Cross(prefix ## vec3 a, prefix ## vec3 b) { return new_ ## prefix ## vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
 
 //Vector "template" instantiations.

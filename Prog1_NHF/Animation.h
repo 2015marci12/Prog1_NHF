@@ -19,3 +19,15 @@ typedef struct SubTexture
 TextureAtlas TextureAtlas_create(GLTexture* tex, uvec2 unit);
 SubTexture TextureAtlas_SubTexture(TextureAtlas* atlas, uvec2 tile, uvec2 size);
 SubTexture SubTexture_empty();
+
+#define MAX_ANIMATION_FRAMES 16
+
+typedef struct Animation 
+{
+	float frameTime;
+	uint32_t frameCount;
+	SubTexture frames[MAX_ANIMATION_FRAMES];
+} Animation;
+
+SubTexture Animation_GetAt(Animation* animation, float time, float* overtime);
+

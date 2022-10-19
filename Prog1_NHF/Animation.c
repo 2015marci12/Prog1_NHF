@@ -33,3 +33,14 @@ SubTexture SubTexture_empty()
 	SubTexture ret = { NULL, new_Rect(0, 0, 1, 1) };
 	return ret;
 }
+
+SubTexture Animation_GetAt(Animation* animation, float time, float* overtime)
+{
+	if (animation)
+	{
+		uint32_t frame = ((uint32_t)(time / animation->frameTime)) % animation->frameCount;
+		if (overtime) *overtime = time - (animation->frameTime * animation->frameCount);
+		return animation->frames[frame];
+	}
+	return SubTexture_empty();
+}

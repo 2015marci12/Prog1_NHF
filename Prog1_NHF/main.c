@@ -13,10 +13,11 @@
 enum ComponentTypes
 {
     Component_NONE = 0,
-    Component_TRANSFORM = 1, //mat4
-    Component_SPRITE = 2, //sprite
-    Component_CAMERA = 3, //camera
-    Component_PLAYER = 4, //player state 
+    Component_TRANSFORM, //mat4
+    Component_SPRITE, //sprite
+    Component_CAMERA, //camera
+    Component_PLAYER, //player state 
+    Component_PLANE,
 };
 
 typedef struct Sprite 
@@ -52,9 +53,10 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
             mat4* transform = View_GetComponent(&sprites, 0);
             Sprite* sprite = View_GetComponent(&sprites, 1);
 
-            //Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
-            vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-            Renderer2D_DrawRotatedQuad_s(renderer, pos, sprite->size, 0.f, sprite->tintColor, sprite->subTex);
+            Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
+            vec3 null = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+            vec3 forward = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+            Renderer2D_DrawLine(renderer, null, forward, new_vec4(0.f, 1.f, 0.f, 1.f));
         }
 
         Renderer2D_EndScene(renderer);
@@ -62,107 +64,79 @@ void RenderSprites(Renderer2D* renderer, Scene_t* scene)
     }
 }
 
-typedef enum PlayerState
-{
-    Player_Idle,
-    Player_Walking,
-    Player_Attacking,
-    Player_Dashing,
-} PlayerState;
-
 typedef struct PlayerComponent 
 {
-    PlayerState state;
     vec2 Direction;
     Timer_t timeSinceStateChange;
     Timer_t LastDash;
 } PlayerComponent;
 
-const float playerSpeed = 10.f;
-const float dashTime = 0.2f;
-const float dashSpeed = 40.f;
-const float dashRecharge = 0.5f;
+typedef struct PlaneMovementComponent 
+{
+    vec2 velocity;
+    float liftcoeff;
+    float dragcoeff;
+    float thrust;
+    float mass;
+} PlaneMovementComponent;
+
+const float g = 5.f;
+const float thrust_idle = 13.f;
+const float thrust_booster = 20.f;
+const float lift_coeff = 2.f;
+const float drag_coeff = 0.1f;
+const float plane_mass = 1.f;
+
+void MovePlanes(Scene_t* scene, float dt)
+{
+    for (View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_PLANE); !View_End(&view); View_Next(&view)) 
+    {
+        mat4* transform = View_GetComponent(&view, 0);
+        PlaneMovementComponent* plane = View_GetComponent(&view, 1);
+
+        vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+        vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+        vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+        vec2 velocitynormal = vec2_Normalize(plane->velocity);
+        float vel = vec2_Len(plane->velocity);
+
+        float dirAngle = vec2_Angle(direction);
+
+        float velAngle = vec2_Angle(velocitynormal);
+        float aoa = max(0.01f, min(1.f, (dirAngle - velAngle)));
+
+        vec2 aeroforce = vec2_Mul_s(velocitynormal, -1.f * (1.f + aoa) * plane->dragcoeff * (vel * vel));
+        vec2 thrustforce = vec2_Mul_s(direction, plane->thrust);
+        vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), g);   
+
+        vec2 lift = vec2_Mul_s(new_vec2(0.f, 1.f), fabsf(plane->velocity.x) * aoa * plane->liftcoeff);
+        TRACE("lift : %f\n", lift.y);
+
+        vec2 accel = vec2_Div_s(vec2_Add(vec2_Add(vec2_Add(aeroforce, thrustforce), gravity), lift), plane->mass);
+        *transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), vec3_Add(pos, new_vec3_v2(vec2_Mul_s(plane->velocity, dt), 0.f))), dirAngle, new_vec3(0.f, 0.f, 1.f));
+        plane->velocity = vec2_Add(plane->velocity, vec2_Mul_s(accel, dt));
+    }
+}
+
+SDL_Window* window;
 
 void UpdatePlayer(Scene_t* scene, float dt)
 {
-    View_t player = View_Create(scene, 3, Component_TRANSFORM, Component_SPRITE, Component_PLAYER);
-
-    mat4* transform = View_GetComponent(&player, 0);
-    Sprite* sprite = View_GetComponent(&player, 1);
-    PlayerComponent* pc = View_GetComponent(&player, 2);
-
+    View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_PLAYER, Component_PLANE);
     InputSnapshot_t input = GetInput();
 
-    vec2 inputDir = new_vec2_v(0.f);
-    if (IsKeyPressed(&input, SDL_SCANCODE_W)) inputDir = vec2_Add(inputDir, new_vec2(0.f, 1.f));
-    if (IsKeyPressed(&input, SDL_SCANCODE_S)) inputDir = vec2_Add(inputDir, new_vec2(0.f, -1.f));
-    if (IsKeyPressed(&input, SDL_SCANCODE_D)) inputDir = vec2_Add(inputDir, new_vec2(1.f, 0.f));
-    if (IsKeyPressed(&input, SDL_SCANCODE_A)) inputDir = vec2_Add(inputDir, new_vec2(-1.f, 0.f));
-    inputDir = vec2_Normalize(inputDir);
+    mat4* transform = View_GetComponent(&view, 0);
 
-    float Elapsed = GetElapsedSeconds(pc->timeSinceStateChange);
-
-    switch (pc->state)
-    {
-    case Player_Idle:      
-        if (vec2_Len(inputDir) > 0.f)
-        {
-            pc->timeSinceStateChange = MakeTimer();
-            pc->state = Player_Walking;
-        }
-        else if (IsKeyPressed(&input, SDL_SCANCODE_LSHIFT) && GetElapsedSeconds(pc->LastDash) > dashRecharge)
-        {
-            pc->timeSinceStateChange = MakeTimer();
-            pc->LastDash = MakeTimer();
-            pc->state = Player_Dashing;
-        }
-        else 
-        {
-            *transform = mat4_Translate(*transform,
-                new_vec3_v2(
-                    vec2_Mul_s(pc->Direction, dt * max(0.f, playerSpeed * (0.2f - Elapsed)))
-                    , 0.f)
-            );
-        }
-        break;
-    case Player_Walking:  
-        if (vec2_Len(inputDir) < 0.1f)
-        {
-            pc->timeSinceStateChange = MakeTimer();
-            pc->state = Player_Idle;
-        }
-        else if (IsKeyPressed(&input, SDL_SCANCODE_LSHIFT) && GetElapsedSeconds(pc->LastDash) > dashRecharge)
-        {
-            pc->timeSinceStateChange = MakeTimer();
-            pc->LastDash = MakeTimer();
-            pc->state = Player_Dashing;
-        }
-        else 
-        {
-            pc->Direction = inputDir;
-            *transform = mat4_Translate(*transform,
-                new_vec3_v2(
-                    vec2_Mul_s(inputDir, dt * min(playerSpeed, playerSpeed * (Elapsed / 0.1f)))
-                    , 0.f)
-            );
-        }
-        break;
-    case Player_Dashing:
-        if (Elapsed > dashTime) 
-        {
-            pc->timeSinceStateChange = MakeTimer();
-            pc->state = Player_Idle;
-        }
-        else 
-        {
-            *transform = mat4_Translate(*transform,
-                new_vec3_v2(
-                    vec2_Mul_s(pc->Direction, dt * dashSpeed)
-                    , 0.f)
-            );
-        }
-        break;
-    }
+    vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+    ivec2 screenSize;
+    SDL_GetWindowSize(window, &screenSize.x, &screenSize.y);
+    ivec2 mousePos = GetMousePos(&input);
+    ivec2 screenCenter = ivec2_Div_s(screenSize, 2);
+    vec2 mouseDiff = ivec2_to_vec2(ivec2_Sub(mousePos, screenCenter));
+    mouseDiff.y *= -1.f;
+    float angle = vec2_Angle(mouseDiff);
+    TRACE("%f\n", angle);
+    *transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), Pos), angle, new_vec3(0.f, 0.f, 1.f));
 }
 
 int main(int argc, char* argv[])
@@ -177,7 +151,7 @@ int main(int argc, char* argv[])
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
-    SDL_Window* window = SDL_CreateWindow("SDL peldaprogram", 
+    window = SDL_CreateWindow("SDL peldaprogram", 
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
         880, 640,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
@@ -205,6 +179,8 @@ int main(int argc, char* argv[])
     Scene_AddComponentType(scene, cameraInfo);
     ComponentInfo_t playerInfo = COMPONENT_DEF(Component_PLAYER, PlayerComponent);
     Scene_AddComponentType(scene, playerInfo);
+    ComponentInfo_t planeInfo = COMPONENT_DEF(Component_PLANE, PlaneMovementComponent);
+    Scene_AddComponentType(scene, planeInfo);
 
 
     Renderer2D renderer;
@@ -219,14 +195,15 @@ int main(int argc, char* argv[])
     mat4* tr = Scene_AddComponent(scene, e, Component_TRANSFORM);
     Sprite* s = Scene_AddComponent(scene, e, Component_SPRITE);
     PlayerComponent* pc = Scene_AddComponent(scene, e, Component_PLAYER);
+    PlaneMovementComponent* pm = Scene_AddComponent(scene, e, Component_PLANE);
 
     *tr = mat4x4_Identity(), new_vec3_v(-1.f);;
     s->subTex = SubTexture_empty();
     s->tintColor = new_vec4(0.f, 0.5f, 1.f, 1.f);
     s->size = new_vec2_v(1.f);
-    pc->Direction = new_vec2_v(0.f);
-    pc->state = Player_Idle;
     pc->timeSinceStateChange = MakeTimer();
+    PlaneMovementComponent temp = { new_vec2_v(0.f), lift_coeff, drag_coeff, thrust_idle, plane_mass };
+    *pm = temp;
 
     entity_t came = Scene_CreateEntity(scene);
     mat4* cam_tr = Scene_AddComponent(scene, came, Component_TRANSFORM);
@@ -245,13 +222,16 @@ int main(int argc, char* argv[])
         timer = MakeTimer();
 
         UpdatePlayer(scene, timediff);
+        MovePlanes(scene, timediff);
 
         Renderer2D_Clear(&renderer, new_vec4_v(0.f));
 
         RenderSprites(&renderer, scene);
 
         cam_tr = Scene_Get(scene, came, Component_TRANSFORM);
-        *cam_tr = *(mat4*)Scene_Get(scene, e, Component_TRANSFORM);
+        tr = Scene_Get(scene, e, Component_TRANSFORM);
+        vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
+        *cam_tr = mat4_Translate(mat4x4_Identity(), Pos);
 
         Renderer2D_BeginScene(&renderer, mat4x4x4_Mul(cam->proj, mat4_Inverse(*cam_tr)));
         
