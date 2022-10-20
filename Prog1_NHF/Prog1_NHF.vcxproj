@@ -25,6 +25,7 @@
     <ClCompile Include="Graphics.c" />
     <ClCompile Include="Input.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="ParticleSystem.c" />
     <ClCompile Include="PoolAllocator.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="Renderer2D.c" />

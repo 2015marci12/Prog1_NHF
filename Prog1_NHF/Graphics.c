@@ -374,8 +374,8 @@ GLTexture* GLTexture_Create(GLTextureType type, GLFormat format, uvec3 size, uin
 
 	glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-	glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	GLTexture temp = { type, format, size,{ tex } };
 	GLTexture* ret = malloc(sizeof(GLTexture));
