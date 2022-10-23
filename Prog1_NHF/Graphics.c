@@ -455,14 +455,54 @@ void flip_surface(SDL_Surface* surface)
 	SDL_UnlockSurface(surface);
 }
 
+uint32_t getPixel(SDL_Surface* surface, int x, int y)
+{
+	int bpp = surface->format->BytesPerPixel;
+	/* Here p is the address to the pixel we want to retrieve */
+	Uint8* p = (Uint8*)surface->pixels + y * surface->pitch + x * bpp;
+
+	switch (bpp) {
+	case 1:
+		return *p;
+
+	case 2:
+		return *(Uint16*)p;
+
+	case 3:
+		if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+			return p[0] << 16 | p[1] << 8 | p[2];
+		else
+			return p[0] | p[1] << 8 | p[2] << 16;
+
+	case 4:
+		return *(Uint32*)p;
+
+	default:
+		return 0;       /* shouldn't happen, but avoids warnings */
+	}
+}
+
+char* ConvertSurfaceRGBA8(SDL_Surface* surface) 
+{
+	char* c = malloc(4 * surface->w * surface->h);
+	for(int x = 0; x < surface->w; x++)
+		for (int y = 0; y < surface->h; y++) 
+		{
+			char* colors = &c[4 * (surface->w * y + x)];
+			uint32_t color = getPixel(surface, x, y);
+			SDL_GetRGBA(color, surface->format, &colors[0], &colors[1], &colors[2], &colors[3]);
+		}
+	return c;
+}
 
 GLTexture* LoadTex2D(const char* path)
 {
 	SDL_Surface* surface = IMG_Load(path);
-	if (!surface->pixels) { ERROR("Failed to load texture: %s\n", path); return NULL; };
+	if (!surface->h) { ERROR("Failed to load texture: %s\n", path); return NULL; };
 
 	int nOfColors = surface->format->BytesPerPixel;
 	uint32_t texture_format;
+	char* temp = NULL;
 	if (nOfColors == 4)     // contains an alpha channel
 	{
 		if (surface->format->Rmask == 0x000000ff)
@@ -474,16 +514,34 @@ GLTexture* LoadTex2D(const char* path)
 	{
 		if (surface->format->Rmask == 0x000000ff)
 			texture_format = GLFormat_RGB;
-		else
-			ASSERT(false, "Unknown Pixel format!");
+		else 
+		{
+			texture_format = GLFormat_RGBA;
+			//Format conversion necessary.
+			temp = ConvertSurfaceRGBA8(surface);
+		}
 	}
-	else ASSERT(false, "Unknown Pixel format!");
+	else 
+	{
+
+		texture_format = GLFormat_RGBA;
+		//Format conversion necessary.
+		temp = ConvertSurfaceRGBA8(surface);
+	}
 
 	flip_surface(surface);
 
 	GLTexture* tex = GLTexture_Create(GLTextureType_2D, texture_format, new_uvec3(surface->w, surface->h, 1), 1);
-	GLTexture_Upload(tex, 0, texture_format, new_uvec3_v(0.f), tex->Size, surface->pixels);
+	if (!temp) 
+	{
+		GLTexture_Upload(tex, 0, texture_format, new_uvec3_v(0.f), tex->Size, surface->pixels);
+	}
+	else 
+	{
+		GLTexture_Upload(tex, 0, GLFormat_RGBA, new_uvec3_v(0.f), tex->Size, temp);
+	}
 
 	SDL_FreeSurface(surface);
+	if (temp) free(temp);
 	return tex;
 }

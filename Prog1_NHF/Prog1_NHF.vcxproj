@@ -56,6 +56,8 @@
   <ItemGroup>
     <None Include="BoosterAnim.ini" />
     <None Include="CannonAnim.ini" />
+    <None Include="ExplosionAnim.ini" />
+    <None Include="MissileAnim.ini" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

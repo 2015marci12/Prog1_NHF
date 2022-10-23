@@ -130,6 +130,7 @@ void Scene_RemoveComponent(Scene_t* ptr, entity_t entity, componentid_t cid);
 typedef struct View_t 
 {
 #define VIEW_MAX_COMPONENTS 32
+	Scene_t* scene;
 	ComponentStorage_t* storages[VIEW_MAX_COMPONENTS];
 	size_t components;
 
@@ -146,3 +147,4 @@ void View_Reset(View_t* ptr);
 size_t View_GetCurrentIndex(View_t* ptr);
 void* View_GetComponent(View_t* ptr, uint32_t CompIndex);
 entity_t View_GetCurrent(View_t* ptr);
+void View_DestroyCurrent_FindNext(View_t* ptr);

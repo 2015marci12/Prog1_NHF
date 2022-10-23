@@ -32,5 +32,4 @@ typedef struct Animation
 } Animation;
 
 SubTexture Animation_GetAt(Animation* animation, float time, float* overtime);
-
 bool Animation_FromIni(const char* filename, Animation* anim, TextureAtlas* atlas);

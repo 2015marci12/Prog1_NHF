@@ -63,7 +63,7 @@ size_t SparseMap_Emplace(SparseMap_t* ptr, entity_t entity)
 	{
 		size_t newCap = max(ptr->dense_capacity * 2, 32);
 		ptr->dense = (entity_t*)realloc(ptr->dense, newCap * sizeof(entity_t));
-		memset(ptr->dense + ptr->dense_capacity, -1, newCap - ptr->dense_capacity);
+		memset(ptr->dense + ptr->dense_capacity, UINT32_MAX, newCap - ptr->dense_capacity);
 		ptr->dense_capacity = newCap;
 	}
 	ptr->dense[ptr->dense_size] = entity;
@@ -77,13 +77,13 @@ size_t SparseMap_Remove(SparseMap_t* ptr, entity_t entity)
 	ASSERT(SparseMap_Contains(ptr, entity), "SparseMap_Remove cannot remove an entity not contained in the map!");
 
 	size_t pos = SparseMap_Index(ptr, entity);
-	entity_t end = ptr->dense[ptr->dense_size];
+	entity_t end = ptr->dense[ptr->dense_size - 1];
 
 	ptr->sparse[end] = (entity_t)pos;
 	ptr->dense[pos] = end;
-	ptr->sparse[entity] = 0;
+	ptr->sparse[entity] = UINT32_MAX;
 
-	ptr->dense[ptr->dense_size] = 0;
+	ptr->dense[ptr->dense_size] = UINT32_MAX;
 	ptr->dense_size--;
 
 	return pos;
@@ -160,7 +160,7 @@ void ComponentStorage_Remove(ComponentStorage_t* ptr, entity_t entity)
 	ASSERT(ptr, "ComponentStorage_Remove does not permit ptr to be NULL");
 	ASSERT(entity != -1, "ComponentStorage_Remove does not permit entity to be invalid (-1)!");
 	size_t pos = SparseMap_Remove(&ptr->sparse, entity);
-	size_t end = ptr->comp_count * ptr->comp.size;
+	size_t end = ptr->comp_count - 1;
 	memmove(
 		ComponentStorage_GetByIndex(ptr, pos),
 		ComponentStorage_GetByIndex(ptr, end),
@@ -320,6 +320,7 @@ View_t View_Create(Scene_t* scene, size_t numComponents, ...)
 	ret.components = numComponents;
 	ret.currentEntity = -1;
 	ret.smallestSetIndex = 0;
+	ret.scene = scene;
 	size_t smallestSetSize = SIZE_MAX;
 
 	//Getting component storages.
@@ -410,4 +411,21 @@ entity_t View_GetCurrent(View_t* ptr)
 {
 	ASSERT(ptr, "View_GetCurrent does not permit ptr to be NULL");
 	return ptr->currentEntity;
+}
+
+void View_DestroyCurrent_FindNext(View_t* ptr)
+{
+	ASSERT(ptr, "View_DestroyCurrent does not permit ptr to be NULL");
+	if (ptr->currentEntity == -1) return;
+	Scene_DeleteEntity(ptr->scene, ptr->currentEntity);
+	ComponentStorage_t* storage = ptr->storages[ptr->smallestSetIndex];
+	ptr->currentIndex--;
+	//Find next entity.
+	do
+	{
+		if ((++ptr->currentIndex) < storage->comp_count)
+			ptr->currentEntity = storage->sparse.dense[ptr->currentIndex];
+		else
+			ptr->currentEntity = -1;
+	} while (ptr->currentEntity != -1 && !View_HasAll(ptr));
 }

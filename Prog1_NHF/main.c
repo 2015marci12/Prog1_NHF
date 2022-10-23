@@ -7,13 +7,13 @@
 #include "Input.h"
 #include "Timer.h"
 #include "ParticleSystem.h"
-#include "Components.h" 
+#include "Components.h"
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
-//Collision layers. 
-typedef enum CollisionLayer 
+//Collision layers.
+typedef enum CollisionLayer
 {
 	Layer_Walls,
 	Layer_Player,
@@ -33,6 +33,7 @@ typedef struct PlayerComponent
 {
 	float fuel;
 	Timer_t boosterParticleTimer;
+	Timer_t shootingTimer;
 } PlayerComponent;
 
 typedef struct PlaneMovementComponent
@@ -44,65 +45,65 @@ typedef struct PlaneMovementComponent
 	float mass;
 } PlaneMovementComponent;
 
+typedef struct BulletMovementComponent 
+{
+	vec2 velocity;
+	Timer_t spawnTimer;
+} BulletMovementComponent;
+
+const float viewport_scale = 10.f;
 const float g = 3.f;
 const float thrust_idle = 13.f;
 const float thrust_booster = 25.f;
 const float lift_coeff = 1.1f;
 const float drag_coeff = 0.1f;
 const float plane_mass = 1.f;
+
 const float booster_fuelconsumption = 0.1f;
 const float booster_particle_time = 0.01f;
 
-void MovePlanes(Scene_t* scene, float dt)
-{
-	for (View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_PLANE); !View_End(&view); View_Next(&view))
-	{
-		mat4* transform = View_GetComponent(&view, 0);
-		PlaneMovementComponent* plane = View_GetComponent(&view, 1);
-
-		vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-		vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
-		vec2 velocitynormal = vec2_Normalize(plane->velocity);
-		float vel = vec2_Len(plane->velocity);
-
-		float dirAngle = vec2_Angle(direction);
-		float velAngle = vec2_Angle(velocitynormal);
-
-		//Angle differernce.
-		float anglediff = dirAngle - velAngle;
-		anglediff += (anglediff > PI) ? -(PI * 2.f) : (anglediff < -PI) ? (PI * 2.f) : 0;
-		float aoa = max(-1.f, min(1.f, (anglediff))); //aoa restricted between [-1, 1]
-
-		vec2 aeroforce = vec2_Mul_s(velocitynormal, -1.f * (0.5f + fabsf(aoa)) * plane->dragcoeff * (vel * vel)); //drag.
-		vec2 thrustforce = vec2_Mul_s(direction, plane->thrust); //thrust.
-		vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), g * plane->mass); //gravity.
-
-		//Lift.
-		vec2 lift = vec2_Rot(new_vec2(0.f, vel * aoa * plane->liftcoeff), velAngle);
-		//Adjust for straight flying.
-		lift = vec2_Add(lift, new_vec2(0.f, fabsf(plane->velocity.x) / 5.f * plane->liftcoeff));
-
-		//Sum forces and divide by mass.
-		vec2 accel = vec2_Div_s(vec2_Add(vec2_Add(vec2_Add(aeroforce, thrustforce), gravity), lift), plane->mass);
-
-		//move.
-		*transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), vec3_Add(pos, new_vec3_v2(vec2_Mul_s(plane->velocity, dt), 0.f))), dirAngle, new_vec3(0.f, 0.f, 1.f));
-
-		//Apply acceleration.
-		plane->velocity = vec2_Add(plane->velocity, vec2_Mul_s(accel, dt));
-
-		if (fabsf(velAngle) > PI / 2.f) *transform = mat4_Scale(*transform, new_vec3(1.f, -1.f, 1.f)); //Invert sprite if the velocity is facing the other way.
-	}
-}
+const float cannon_shooting_time = 0.08f;
+const float bullet_velocity = 20.f;
+const float bullet_lifeTime = 1.f;
+const float bullet_damage = 1.f;
 
 SDL_Window* window;
 
 GLTexture* tex;
 TextureAtlas atlas;
 SubTexture planeTex;
+
 Animation boosterAnim;
 Animation cannonAnim;
+
+GLTexture* weaponsTex;
+TextureAtlas weaponsAtlas;
+SubTexture bulletSubTex;
+
+Animation missileAnim;
+
+GLTexture* explosionTex;
+TextureAtlas explosionAtlas;
+Animation explosionAnim;
+
+bool explosionUpdateFun(Particle* p, float dt) 
+{
+	float seconds = GetElapsedSeconds(p->spawnTimer);
+	float overtime;
+	p->tex = Animation_GetAt(&explosionAnim, seconds, &overtime);
+	return overtime < 0.f;
+}
+
+void Explosion(mat4 transform, vec2 size) 
+{
+	Particle p;
+	p.col = new_vec4_v(1.f);
+	p.transform = mat4_Scale(transform, new_vec3_v2(size, 1.f));
+	p.updateFun = explosionUpdateFun;
+	p.tex = Animation_GetAt(&explosionAnim, 0, NULL);
+	p.spawnTimer = MakeTimer();
+	Particles_Emit(particles, p);
+}
 
 void UpdatePlayer(Scene_t* scene, float dt)
 {
@@ -125,6 +126,8 @@ void UpdatePlayer(Scene_t* scene, float dt)
 	//Look at mouse.
 	float angle = vec2_Angle(mouseDiff);
 	*transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), Pos), angle, new_vec3(0.f, 0.f, 1.f));
+
+	if (pm->velocity.x < 0) *transform = mat4_Scale(*transform, new_vec3(1.f, -1.f, 1.f)); //Invert sprite if the velocity is facing the other way.
 
 	//scale thrust.
 	float thrust = thrust_idle;
@@ -177,10 +180,99 @@ void UpdatePlayer(Scene_t* scene, float dt)
 		//cannon animation.
 		Timer_t timer = { 0 };
 		sprite->overlays[1] = Animation_GetAt(&cannonAnim, GetElapsedSeconds(timer), NULL);
+
+		//Spawn bullet
+		if (GetElapsedSeconds(pc->shootingTimer) > cannon_shooting_time)
+		{
+			pc->shootingTimer = MakeTimer();
+			entity_t bullet = Scene_CreateEntity(scene);
+
+			vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+			vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+			vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+
+			mat4* bullettransform = Scene_AddComponent(scene, bullet, Component_TRANSFORM);
+			*bullettransform = mat4_Translate(*transform, new_vec3(0.6f, 0.f, 0.f));
+
+			Sprite* bulletsprite = Scene_AddComponent(scene, bullet, Component_SPRITE);
+			*bulletsprite = Sprite_init();
+			bulletsprite->size = new_vec2(0.3, 0.3);
+			bulletsprite->subTex = bulletSubTex;
+			bulletsprite->tintColor = new_vec4_v(1.f);
+
+			BulletMovementComponent* bc = Scene_AddComponent(scene, bullet, Component_BULLET);
+			bc->spawnTimer = MakeTimer();
+			bc->velocity = vec2_Add(pm->velocity, vec2_Mul_s(direction, bullet_velocity));
+		}
 	}
 	else
 	{
 		sprite->overlays[1] = SubTexture_empty();
+	}
+}
+
+void MovePlanes(Scene_t* scene, float dt)
+{
+	for (View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_PLANE); !View_End(&view); View_Next(&view))
+	{
+		mat4* transform = View_GetComponent(&view, 0);
+		PlaneMovementComponent* plane = View_GetComponent(&view, 1);
+
+		vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+		vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+		vec2 velocitynormal = vec2_Normalize(plane->velocity);
+		float vel = vec2_Len(plane->velocity);
+
+		float dirAngle = vec2_Angle(direction);
+		float velAngle = vec2_Angle(velocitynormal);
+
+		//Angle differernce.
+		float anglediff = dirAngle - velAngle;
+		anglediff += (anglediff > PI) ? -(PI * 2.f) : (anglediff < -PI) ? (PI * 2.f) : 0;
+		float aoa = max(-1.f, min(1.f, (anglediff))); //aoa restricted between [-1, 1]
+
+		vec2 aeroforce = vec2_Mul_s(velocitynormal, -1.f * (0.5f + fabsf(aoa)) * plane->dragcoeff * (vel * vel)); //drag.
+		vec2 thrustforce = vec2_Mul_s(direction, plane->thrust); //thrust.
+		vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), g * plane->mass); //gravity.
+
+		//Lift.
+		vec2 lift = vec2_Rot(new_vec2(0.f, vel * aoa * plane->liftcoeff), velAngle);
+		//Adjust for straight flying.
+		lift = vec2_Add(lift, new_vec2(0.f, fabsf(plane->velocity.x) / 5.f * plane->liftcoeff));
+
+		//Sum forces and divide by mass.
+		vec2 accel = vec2_Div_s(vec2_Add(vec2_Add(vec2_Add(aeroforce, thrustforce), gravity), lift), plane->mass);
+
+		//move.
+		*transform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), new_vec3_v2(vec2_Mul_s(plane->velocity, dt), 0.f)), *transform);
+
+		//Apply acceleration.
+		plane->velocity = vec2_Add(plane->velocity, vec2_Mul_s(accel, dt));
+	}
+}
+
+void UpdateBullets(Scene_t* scene, float dt)
+{
+	View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_BULLET);
+	while (!View_End(&view))
+	{
+		mat4* transform = View_GetComponent(&view, 0);
+		BulletMovementComponent* bullet = View_GetComponent(&view, 1);
+
+		vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+		vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+
+		*transform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), new_vec3_v2(vec2_Mul_s(bullet->velocity, dt), 0.f)), *transform);
+
+		if (GetElapsedSeconds(bullet->spawnTimer) < bullet_lifeTime) View_Next(&view);
+		else
+		{
+			//TODO spawn poof particles.
+			Explosion(*transform, new_vec2_v(6.f));
+			View_DestroyCurrent_FindNext(&view);
+		}
 	}
 }
 
@@ -216,18 +308,30 @@ int main(int argc, char* argv[])
 	atlas = TextureAtlas_create(tex, new_uvec2(64, 32));
 	planeTex = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 3), new_uvec2(1, 1));
 
+	weaponsTex = LoadTex2D("weapons.png");
+	weaponsAtlas = TextureAtlas_create(weaponsTex, new_uvec2(16, 16));
+	bulletSubTex = TextureAtlas_SubTexture(&weaponsAtlas, new_uvec2(0, 1), new_uvec2(1, 1));
+
+	explosionTex = LoadTex2D("Explosion.png");
+	explosionAtlas = TextureAtlas_create(explosionTex, new_uvec2(96, 96));
+
 	Animation_FromIni("BoosterAnim.ini", &boosterAnim, &atlas);
 	Animation_FromIni("CannonAnim.ini", &cannonAnim, &atlas);
+	Animation_FromIni("MissileAnim.ini", &missileAnim, &weaponsAtlas);
+	Animation_FromIni("ExplosionAnim.ini", &explosionAnim, &explosionAtlas);
 
 	//Add components.
 	Scene_t* scene = Scene_New();
 	RegisterTransform(scene);
 	RegisterSprite(scene);
 	RegisterCamera(scene);
+	RegisterColloider(scene);
 	ComponentInfo_t playerInfo = COMPONENT_DEF(Component_PLAYER, PlayerComponent);
 	Scene_AddComponentType(scene, playerInfo);
 	ComponentInfo_t planeInfo = COMPONENT_DEF(Component_PLANE, PlaneMovementComponent);
 	Scene_AddComponentType(scene, planeInfo);
+	ComponentInfo_t bulletinfo = COMPONENT_DEF(Component_BULLET, BulletMovementComponent);
+	Scene_AddComponentType(scene, bulletinfo);
 
 	Renderer2D renderer;
 	Renderer2D_Init(&renderer);
@@ -257,8 +361,8 @@ int main(int argc, char* argv[])
 	mat4* cam_tr = Scene_AddComponent(scene, came, Component_TRANSFORM);
 	Camera* cam = Scene_AddComponent(scene, came, Component_CAMERA);
 	*cam_tr = mat4x4_Identity();
-	float scale = 10.f;
-	*cam = mat4_Ortho(-aspect * scale, aspect * scale, scale, -scale, -1000, 1000);
+	
+	*cam = mat4_Ortho(-aspect * viewport_scale, aspect * viewport_scale, viewport_scale, -viewport_scale, -1000, 1000);
 
 	Timer_t timer = MakeTimer();
 
@@ -277,13 +381,14 @@ int main(int argc, char* argv[])
 
 		Renderer2D_Clear(&renderer, new_vec4_v(0.f));
 
-		UpdatePlayer(scene, timediff);
 		MovePlanes(scene, timediff);
+		UpdatePlayer(scene, timediff);
 
 		mat4 camera;
 		GetCamera(scene, &cam_tr, &cam, &camera);
 
 		Particles_Update(particles, timediff);
+		UpdateBullets(scene, timediff);
 
 		RenderSprites(scene, &renderer, camera);
 
@@ -294,22 +399,22 @@ int main(int argc, char* argv[])
 		Renderer2D_BeginScene(&renderer, camera);
 
 		vec2 camPos = new_vec2_v4(mat4x4_Mul_v(*cam_tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		for (float x = camPos.x - aspect * scale; x < camPos.x + aspect * scale; x++)
+		for (float x = camPos.x - aspect * viewport_scale; x < camPos.x + aspect * viewport_scale; x++)
 		{
 			float x_ = floorf(x / 5.f) * 5.f;
 			Renderer2D_DrawLine(&renderer,
-				new_vec3(x_, camPos.y + scale, -1.f),
-				new_vec3(x_, camPos.y - scale, -1.f),
+				new_vec3(x_, camPos.y + viewport_scale, -1.f),
+				new_vec3(x_, camPos.y - viewport_scale, -1.f),
 				new_vec4_v(1.f)
 			);
 		}
 
-		for (float y = camPos.y - scale; y < camPos.y + scale; y++)
+		for (float y = camPos.y - viewport_scale; y < camPos.y + viewport_scale; y++)
 		{
 			float y_ = floorf(y / 5.f) * 5.f;
 			Renderer2D_DrawLine(&renderer,
-				new_vec3(camPos.x + aspect * scale, y_, -1.f),
-				new_vec3(camPos.x - aspect * scale, y_, -1.f),
+				new_vec3(camPos.x + aspect * viewport_scale, y_, -1.f),
+				new_vec3(camPos.x - aspect * viewport_scale, y_, -1.f),
 				new_vec4_v(1.f)
 			);
 		}
@@ -326,6 +431,8 @@ int main(int argc, char* argv[])
 
 	Scene_Delete(scene);
 	GLTexture_Destroy(tex);
+	GLTexture_Destroy(weaponsTex);
+	GLTexture_Destroy(explosionTex);
 	Particles_Delete(particles);
 	Renderer2D_Destroy(&renderer);
 	SDL_GL_DeleteContext(glcontext);

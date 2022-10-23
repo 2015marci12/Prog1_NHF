@@ -15,6 +15,7 @@ enum ComponentTypes
 	Component_COLLOIDER,
 	Component_PLAYER,
 	Component_PLANE,
+	Component_BULLET,
 };
 
 /*

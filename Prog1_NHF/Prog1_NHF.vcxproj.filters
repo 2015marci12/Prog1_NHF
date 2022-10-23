@@ -121,5 +121,11 @@
     <None Include="CannonAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="MissileAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ExplosionAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
