@@ -392,6 +392,12 @@ void View_Reset(View_t* ptr)
 	}
 }
 
+size_t View_GetCurrentIndex(View_t* ptr)
+{
+	if (ptr) return ptr->currentIndex;
+	return 0;
+}
+
 void* View_GetComponent(View_t* ptr, uint32_t CompIndex)
 {
 	ASSERT(ptr, "View_GetComponent does not permit ptr to be NULL");

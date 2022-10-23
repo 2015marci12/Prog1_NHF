@@ -140,5 +140,6 @@ bool View_HasAll(View_t* ptr);
 bool View_End(View_t* ptr);
 void View_Next(View_t* ptr);
 void View_Reset(View_t* ptr);
+size_t View_GetCurrentIndex(View_t* ptr);
 void* View_GetComponent(View_t* ptr, uint32_t CompIndex);
 entity_t View_GetCurrent(View_t* ptr);

@@ -82,8 +82,9 @@ void FireCollisionEvents(Scene_t* scene)
 		for (View_t inner = View_Create(scene, 2, Component_TRANSFORM, Component_COLLOIDER);
 			!View_End(&inner); View_Next(&inner))
 		{
-			//Avoid checking entites with themselves
-			if (View_GetCurrent(&outter) == View_GetCurrent(&inner)) 
+			//Avoid checking entites with themselves or duplicate checks.
+			if (View_GetCurrentIndex(&outter) > View_GetCurrentIndex(&inner)
+				&& View_GetCurrent(&outter) == View_GetCurrent(&inner)) //Should be redundant, still here just to be safe.
 			{
 				continue;
 			}
