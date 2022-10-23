@@ -247,13 +247,13 @@ int main(int argc, char* argv[])
 
 	Timer_t timer = MakeTimer();
 
-	SDL_Event ev;
+	EventDispatcher_t ev;
 	bool exit = false;
 	while (!exit)
 	{
-		while (SDL_PollEvent(&ev))
+		while (GetEvent(&ev))
 		{
-			exit |= ev.type == SDL_QUIT;
+			exit |= ev.e.type == SDL_QUIT;
 		}
 
 		float timediff = GetElapsedSeconds(timer);

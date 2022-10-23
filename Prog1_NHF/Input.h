@@ -28,5 +28,5 @@ typedef struct EventDispatcher_t
 	bool handled;
 } EventDispatcher_t;
 
-EventDispatcher_t GetEvent();
+bool GetEvent(EventDispatcher_t* e);
 bool DispatchEvent(EventDispatcher_t* dispatcher, uint32_t type, EventFun_t handler, void* userdata);

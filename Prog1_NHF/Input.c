@@ -24,13 +24,10 @@ ivec2 GetMousePos(const InputSnapshot_t* state)
 	return state ? new_ivec2(state->mouseX, state->mouseY) : new_ivec2_v(0);
 }
 
-EventDispatcher_t GetEvent()
+bool GetEvent(EventDispatcher_t* e)
 {
-	EventDispatcher_t ret;
-	memset(&ret.e, 0, sizeof(SDL_Event));
-
-	ret.handled = !SDL_PollEvent(&ret.e);
-	return ret;
+	e->handled = false;
+	return SDL_PollEvent(&e->e);
 }
 
 bool DispatchEvent(EventDispatcher_t* dispatcher, uint32_t type, EventFun_t handler, void* userdata)
