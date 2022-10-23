@@ -32,4 +32,3 @@ void* LinearAllocator_Allocate(LinearAllocator_t* alloc, size_t size);
 * Reset the given allocator chain.
 */
 void LinearAllocator_Reset(LinearAllocator_t* alloc);
-

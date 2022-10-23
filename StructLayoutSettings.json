@@ -3,10 +3,10 @@
   "AutomaticExtraction": true,
   "CMakeCommandsFile": "",
   "AdditionalPreprocessorDefinitions": "",
-  "AdditionalIncludeDirs": "",
+  "AdditionalIncludeDirs": "C:\\Projects\\vcpkg\\installed\\x64-windows\\include",
   "AdditionalForceIncludes": "",
   "AdditionalCommandLine": "",
-  "EnableWarnings": false,
+  "EnableWarnings": true,
   "PDBLocation": "",
   "ParserOutputFolder": ""
 }

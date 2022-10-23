@@ -68,6 +68,19 @@ entity_t GetCamera(Scene_t* scene, mat4** transform, mat4** projection, mat4* mv
 
 uint32_t collisionEventType = 0;
 
+void RegisterColloider(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_COLLOIDER, Colloider);
+	Scene_AddComponentType(scene, cinf);
+}
+
+uint32_t CollisionEventType()
+{
+	//Register event if necessary.
+	if (!collisionEventType) collisionEventType = SDL_RegisterEvents(1);
+	return collisionEventType;
+}
+
 void FireCollisionEvents(Scene_t* scene)
 {
 	//check everything against everything. Not too efficient but this is the simplest solution.
@@ -87,36 +100,36 @@ void FireCollisionEvents(Scene_t* scene)
 				continue;
 			}
 
+			//Get components.
 			mat4* transform1 = View_GetComponent(&outter, 0);
 			mat4* transform2 = View_GetComponent(&inner, 0);
 			Colloider* colloider1 = View_GetComponent(&outter, 1);
 			Colloider* colloider2 = View_GetComponent(&inner, 1);
 
+			//Prefill predictable event data.
+			CollisionEvent e;
+			e.a = View_GetCurrent(&outter);
+			e.b = View_GetCurrent(&inner);
+
 			//Check collision layers.
-			if (
-				(colloider1->layermask & 1ull << (colloider2->layer - 1))
-				&&
-				(colloider2->layermask & 1ull << (colloider1->layer - 1))
-				)
+			e.AWantedToColloideWithB = colloider1->layermask & BIT(colloider2->layer - 1);
+			e.BWantedToColloideWithA = colloider2->layermask & BIT(colloider1->layer - 1);
+			//Same layer-layermask logic that is used in the GODOT engine, because that sounded useful.
+
+			if (e.AWantedToColloideWithB || e.BWantedToColloideWithA) //Check collison if either entity wants to check the other.
 			{
-				//Calculate the transformed AABBs.
+				//Calculate the transformed AABBs. TODO may want to recalculate the size according to rotation.
 				vec2 aPos = new_vec2_v4(mat4x4_Mul_v(*transform1, new_vec4_v2(colloider1->body.Pos, 0.f, 1.f))),
 					bPos = new_vec2_v4(mat4x4_Mul_v(*transform2, new_vec4_v2(colloider2->body.Pos, 0.f, 1.f)));
 				Rect aMov = new_Rect_ps(aPos, colloider1->body.Size),
 					bMov = new_Rect_ps(bPos, colloider2->body.Size);
 
-				//Register event if necessary.
-				if (!collisionEventType) collisionEventType = SDL_RegisterEvents(1);
-
-				//Fill out event and check collision.
-				CollisionEvent e;
-				e.a = View_GetCurrent(&outter);
-				e.b = View_GetCurrent(&inner);
+				//Fill out event manifold and check collision.			
 				if (Rect_Intersects(aMov, bMov, &e.normal, &e.penetration))
 				{
 					//Fire collision event. data1: the event parameters; data2: a pointer to the scene.
-					int ret = PushEvent(NULL, collisionEventType, 0, &e, sizeof(CollisionEvent), scene);
-					//Report warning if unsuccessful.
+					int ret = PushEvent(NULL, CollisionEventType(), 0, &e, sizeof(CollisionEvent), scene);
+					//Report warning if the push is unsuccessful.
 					if (ret != 1) WARN("Collision events not handled: Failed to push event. Error code %d\n", ret);
 				}
 			}

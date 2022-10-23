@@ -74,9 +74,19 @@ typedef struct Colloider
 
 typedef struct CollisionEvent 
 {
-	entity_t a, b;
-	vec2 normal;
-	float penetration;
+	entity_t a, b; //The two entities that colloided.
+	vec2 normal; //The collision normal.
+	float penetration; //The depth of the collision.
+	uint32_t AWantedToColloideWithB : 1; //Whether b is in a's layer mask.
+	uint32_t BWantedToColloideWithA : 1; //Whether a is in b's layer mask.
 } CollisionEvent;
 
+void RegisterColloider(Scene_t* scene);
+/*
+* Get the sdl event type code for collisions.
+*/
+uint32_t CollisionEventType();
+/*
+* Fire collision events in the scene.
+*/
 void FireCollisionEvents(Scene_t* scene);

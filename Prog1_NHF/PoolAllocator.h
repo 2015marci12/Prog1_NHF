@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct FreeListNode_t 
 {

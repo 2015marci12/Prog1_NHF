@@ -2,6 +2,9 @@
 #include "Core.h"
 #include "Container.h"
 
+#include <stdarg.h>
+#include <stdbool.h>
+
 typedef uint32_t entity_t; //The unique identifier of an entity at runtime. Should not be used to save relationships.
 typedef uint32_t componentid_t; //The id of the component type.
 

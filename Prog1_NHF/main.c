@@ -12,6 +12,21 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
+//Collision layers. 
+typedef enum CollisionLayer 
+{
+	Layer_Walls,
+	Layer_Player,
+	Layer_Enemies,
+	Layer_Bullets,
+	Layer_Missiles,
+} CollisionLayer;
+
+#define PLAYER_BULLET_MASK (BIT(Layer_Walls) | BIT(Layer_Enemies) | BIT(Layer_Missiles))
+#define PLAYER_MISSILE_MASK (BIT(Layer_Walls) | BIT(Layer_Enemies) | BIT(Layer_Bullets))
+#define ENEMY_BULLET_MASK (BIT(Layer_Walls) | BIT(Layer_Player) | BIT(Layer_Missiles))
+#define PLAYER_MISSILE_MASK (BIT(Layer_Walls) | BIT(Layer_Player) | BIT(Layer_Bullets))
+
 ParticleSystem* particles;
 
 typedef struct PlayerComponent

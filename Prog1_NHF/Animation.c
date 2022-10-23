@@ -59,7 +59,7 @@ static int iniHandler(void* user, const char* section, const char* name,
 	
 	if (strcmp(section, "anim") == 0) 
 	{
-		if (strcmp(name, "frameTime") == 0) { data->frameTime = atof(value); }
+		if (strcmp(name, "frameTime") == 0) { data->frameTime = (float)atof(value); }
 		else if (strcmp(name, "frameCount") == 0) { data->frameCount = atoi(value); }
 		else
 		{
@@ -69,9 +69,9 @@ static int iniHandler(void* user, const char* section, const char* name,
 	}
 	else 
 	{
-		int frameNum = -1;
-		if ((sscanf(section, "frame%d", &frameNum) == 1)
-			&& (frameNum >= 0)
+		uint32_t frameNum = -1;
+		if ((sscanf_s(section, "frame%d", &frameNum) == 1)
+			&& (frameNum != -1)
 			&& (frameNum < data->frameCount))
 		{
 			if (strcmp(name, "x") == 0) { data->frames[frameNum].tile.x = atoi(value); }
@@ -100,7 +100,7 @@ bool Animation_FromIni(const char* filename, Animation* anim, TextureAtlas* atla
 
 	anim->frameCount = temp.frameCount;
 	anim->frameTime = temp.frameTime;
-	for(int i = 0; i < MAX_ANIMATION_FRAMES; i++) 
+	for(uint32_t i = 0; i < MAX_ANIMATION_FRAMES; i++) 
 	{
 		anim->frames[i] = (i < temp.frameCount && temp.frames[i].size.x != 0) ?
 			TextureAtlas_SubTexture(atlas, temp.frames[i].tile, temp.frames[i].size) :
