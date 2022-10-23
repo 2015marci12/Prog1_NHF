@@ -91,7 +91,7 @@ void* ComponentStorage_Emplace(ComponentStorage_t* ptr, entity_t entity);
 void ComponentStorage_Remove(ComponentStorage_t* ptr, entity_t entity);
 
 /*
-* 
+* An entire ecs world. stores type information, assigns entity ids, handles component storages.
 */
 typedef struct Scene_t 
 {
@@ -119,6 +119,11 @@ void* Scene_Get(Scene_t* ptr, entity_t entity, componentid_t cid);
 void* Scene_AddComponent(Scene_t* ptr, entity_t entity, componentid_t cid);
 void Scene_RemoveComponent(Scene_t* ptr, entity_t entity, componentid_t cid);
 
+/*
+* A way to iterate entities with a given composition.
+* Caches component storages and uses the most restrictive component choice as a base
+* for the iteration.
+*/
 typedef struct View_t 
 {
 #define VIEW_MAX_COMPONENTS 32

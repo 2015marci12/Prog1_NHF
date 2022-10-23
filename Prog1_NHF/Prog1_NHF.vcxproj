@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Animation.c" />
+    <ClCompile Include="Components.c" />
     <ClCompile Include="Container.c" />
     <ClCompile Include="ECS.c" />
     <ClCompile Include="Graphics.c" />
@@ -33,6 +34,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animation.h" />
+    <ClInclude Include="Components.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="debugmalloc.h" />
@@ -48,6 +50,10 @@
     <ClInclude Include="Random.h" />
     <ClInclude Include="Renderer2D.h" />
     <ClInclude Include="Timer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BoosterAnim.ini" />
+    <None Include="CannonAnim.ini" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

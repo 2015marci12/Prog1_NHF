@@ -7,73 +7,12 @@
 #include "Input.h"
 #include "Timer.h"
 #include "ParticleSystem.h"
+#include "Components.h" 
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
-enum ComponentTypes
-{
-	Component_NONE = 0,
-	Component_TRANSFORM, //mat4
-	Component_SPRITE, //sprite
-	Component_CAMERA, //camera
-	Component_PLAYER, //player state
-	Component_PLANE,
-};
-
-typedef struct Sprite
-{
-	vec4 tintColor;
-	vec2 size;
-	SubTexture subTex;
-	SubTexture overlays[5];
-} Sprite;
-
-typedef struct Camera
-{
-	mat4 proj;
-} Camera;
-
 ParticleSystem* particles;
-
-void RenderSprites(Renderer2D* renderer, Scene_t* scene)
-{
-	//pre-create view to cache storages.
-	View_t sprites = View_Create(scene, 2, Component_TRANSFORM, Component_SPRITE);
-
-	//For each entity with a camera (usually only one)
-	for (View_t cameras = View_Create(scene, 2, Component_CAMERA, Component_TRANSFORM); !View_End(&cameras); View_Next(&cameras))
-	{
-		Camera* cam = View_GetComponent(&cameras, 0);
-		mat4* cam_tr = View_GetComponent(&cameras, 1);
-
-		mat4 VP = mat4x4x4_Mul(cam->proj, mat4_Inverse(*cam_tr));
-
-		Renderer2D_BeginScene(renderer, VP);
-
-		//Render each renderable.
-		for (View_Reset(&sprites); !View_End(&sprites); View_Next(&sprites))
-		{
-			mat4* transform = View_GetComponent(&sprites, 0);
-			Sprite* sprite = View_GetComponent(&sprites, 1);
-
-			Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
-			for (int i = 0; i < 5; i++)
-			{
-				if (sprite->overlays[i].texture != NULL)
-				{
-					mat4 tr = mat4_Translate(*transform, new_vec3(0.f, 0.f, i * 0.01f));
-					Renderer2D_DrawSprite(renderer, tr, sprite->size, sprite->tintColor, sprite->overlays[i]);
-				}
-			}
-		}
-
-		Renderer2D_EndScene(renderer);
-
-		//Draw particles.
-		Particles_Draw(particles, renderer, VP);
-	}
-}
 
 typedef struct PlayerComponent
 {
@@ -99,7 +38,7 @@ const float plane_mass = 1.f;
 const float booster_fuelconsumption = 0.1f;
 const float booster_particle_time = 0.01f;
 
-void MovePlanes(Scene_t* scene, float dt, Renderer2D* renderer)
+void MovePlanes(Scene_t* scene, float dt)
 {
 	for (View_t view = View_Create(scene, 2, Component_TRANSFORM, Component_PLANE); !View_End(&view); View_Next(&view))
 	{
@@ -262,26 +201,14 @@ int main(int argc, char* argv[])
 	atlas = TextureAtlas_create(tex, new_uvec2(64, 32));
 	planeTex = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 3), new_uvec2(1, 1));
 
-	boosterAnim.frameCount = 3;
-	boosterAnim.frameTime = 0.16f;
-	boosterAnim.frames[0] = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 1), new_uvec2(1, 1));
-	boosterAnim.frames[1] = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 0), new_uvec2(1, 1));
-	boosterAnim.frames[2] = TextureAtlas_SubTexture(&atlas, new_uvec2(1, 1), new_uvec2(1, 1));
-
-	cannonAnim.frameCount = 3;
-	cannonAnim.frameTime = 0.08f;
-	cannonAnim.frames[0] = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 2), new_uvec2(1, 1));
-	cannonAnim.frames[2] = TextureAtlas_SubTexture(&atlas, new_uvec2(1, 3), new_uvec2(1, 1));
-	cannonAnim.frames[3] = SubTexture_empty();
+	Animation_FromIni("BoosterAnim.ini", &boosterAnim, &atlas);
+	Animation_FromIni("CannonAnim.ini", &cannonAnim, &atlas);
 
 	//Add components.
 	Scene_t* scene = Scene_New();
-	ComponentInfo_t transformInfo = COMPONENT_DEF(Component_TRANSFORM, mat4);
-	Scene_AddComponentType(scene, transformInfo);
-	ComponentInfo_t spriteInfo = COMPONENT_DEF(Component_SPRITE, Sprite);
-	Scene_AddComponentType(scene, spriteInfo);
-	ComponentInfo_t cameraInfo = COMPONENT_DEF(Component_CAMERA, Camera);
-	Scene_AddComponentType(scene, cameraInfo);
+	RegisterTransform(scene);
+	RegisterSprite(scene);
+	RegisterCamera(scene);
 	ComponentInfo_t playerInfo = COMPONENT_DEF(Component_PLAYER, PlayerComponent);
 	Scene_AddComponentType(scene, playerInfo);
 	ComponentInfo_t planeInfo = COMPONENT_DEF(Component_PLANE, PlaneMovementComponent);
@@ -316,7 +243,7 @@ int main(int argc, char* argv[])
 	Camera* cam = Scene_AddComponent(scene, came, Component_CAMERA);
 	*cam_tr = mat4x4_Identity();
 	float scale = 10.f;
-	cam->proj = mat4_Ortho(-aspect * scale, aspect * scale, scale, -scale, -1000, 1000);
+	*cam = mat4_Ortho(-aspect * scale, aspect * scale, scale, -scale, -1000, 1000);
 
 	Timer_t timer = MakeTimer();
 
@@ -335,18 +262,20 @@ int main(int argc, char* argv[])
 		Renderer2D_Clear(&renderer, new_vec4_v(0.f));
 
 		UpdatePlayer(scene, timediff);
-		MovePlanes(scene, timediff, &renderer);
+		MovePlanes(scene, timediff);
+
+		mat4 camera;
+		GetCamera(scene, &cam_tr, &cam, &camera);
 
 		Particles_Update(particles, timediff);
 
-		RenderSprites(&renderer, scene);
+		RenderSprites(scene, &renderer, camera);
 
-		cam_tr = Scene_Get(scene, came, Component_TRANSFORM);
 		tr = Scene_Get(scene, e, Component_TRANSFORM);
 		vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
 		*cam_tr = mat4_Translate(mat4x4_Identity(), Pos);
 
-		Renderer2D_BeginScene(&renderer, mat4x4x4_Mul(cam->proj, mat4_Inverse(*cam_tr)));
+		Renderer2D_BeginScene(&renderer, camera);
 
 		vec2 camPos = new_vec2_v4(mat4x4_Mul_v(*cam_tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
 		for (float x = camPos.x - aspect * scale; x < camPos.x + aspect * scale; x++)
@@ -370,6 +299,9 @@ int main(int argc, char* argv[])
 		}
 
 		Renderer2D_EndScene(&renderer);
+
+		//Draw particles.
+		Particles_Draw(particles, &renderer, camera);
 
 		SDL_GL_SwapWindow(window);
 
