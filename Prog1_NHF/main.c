@@ -29,7 +29,7 @@ typedef struct PlaneMovementComponent
 	float mass;
 } PlaneMovementComponent;
 
-const float g = 5.f;
+const float g = 3.f;
 const float thrust_idle = 13.f;
 const float thrust_booster = 25.f;
 const float lift_coeff = 1.1f;
@@ -253,7 +253,8 @@ int main(int argc, char* argv[])
 	{
 		while (GetEvent(&ev))
 		{
-			exit |= ev.e.type == SDL_QUIT;
+			//Dispatch events.
+			exit |= !ev.handled && ev.e.type == SDL_QUIT; //Exit once there is an unhandled QUIT event.
 		}
 
 		float timediff = GetElapsedSeconds(timer);

@@ -54,6 +54,9 @@
     <ClCompile Include="Components.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LinearAllocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -105,6 +108,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="Components.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LinearAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

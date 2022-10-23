@@ -25,6 +25,7 @@
     <ClCompile Include="ECS.c" />
     <ClCompile Include="Graphics.c" />
     <ClCompile Include="Input.c" />
+    <ClCompile Include="LinearAllocator.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="ParticleSystem.c" />
     <ClCompile Include="PoolAllocator.c" />
@@ -43,6 +44,7 @@
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="LinearAllocator.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
     <ClInclude Include="ParticleSystem.h" />

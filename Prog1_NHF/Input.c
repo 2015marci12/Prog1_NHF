@@ -36,3 +36,37 @@ bool DispatchEvent(EventDispatcher_t* dispatcher, uint32_t type, EventFun_t hand
 	if (!dispatcher->handled && type == dispatcher->e.type) dispatcher->handled |= handler(&dispatcher->e, userdata);
 	return dispatcher->handled;
 }
+
+LinearAllocator_t* userEventAllocator = NULL;
+
+int PushEvent(SDL_Window* window, uint32_t eventtype, int32_t code, void* eventdata, size_t datasize, void* userdata2)
+{
+	void* data = NULL;
+	if (eventdata) //Allocate space for the user defined event structure data if it exists.
+	{
+		if (!userEventAllocator) userEventAllocator = LinearAllocator_Create(4096u);
+		data = LinearAllocator_Allocate(userEventAllocator, datasize);
+		memcpy(data, eventdata, datasize);
+	}
+
+	SDL_Event e;
+	e.type = eventtype;
+	e.user.code = code;
+	e.user.data1 = data;
+	e.user.data2 = userdata2;
+	e.user.timestamp = SDL_GetTicks();
+	e.user.windowID = window ? SDL_GetWindowID(window) : 0;
+
+	return SDL_PushEvent(&e); //Event queue may be full, or code may be wrong. in this case, an error is passed to the user.
+}
+
+void ResetUserEventMemory()
+{
+	LinearAllocator_Reset(userEventAllocator);
+}
+
+void ShutDownUserEvents()
+{
+	LinearAllocator_Destroy(userEventAllocator);
+	userEventAllocator = NULL;
+}

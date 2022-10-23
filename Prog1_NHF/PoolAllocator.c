@@ -2,25 +2,25 @@
 
 PoolBlock_t* Pool_newBlock(size_t elem_size, size_t count, FreeListNode_t** freelist)
 {
-    size_t totalSize = elem_size * count;
-    PoolBlock_t* block = malloc(sizeof(PoolBlock_t) * totalSize);
-    if (!block) return NULL; //Out of memory.
-    block->size = totalSize;
-    block->next = NULL;
-    for(char* ptr = block->data; ptr != &block->data[totalSize]; ptr += elem_size)
-    {
-        FreeListNode_t* temp = ptr;
-        temp->next = *freelist;
-        *freelist = temp;
-    }
-    return block;
+	size_t totalSize = elem_size * count;
+	PoolBlock_t* block = malloc(sizeof(PoolBlock_t) * totalSize);
+	if (!block) return NULL; //Out of memory.
+	block->size = totalSize;
+	block->next = NULL;
+	for(char* ptr = block->data; ptr != &block->data[totalSize]; ptr += elem_size)
+	{
+		FreeListNode_t* temp = ptr;
+		temp->next = *freelist;
+		*freelist = temp;
+	}
+	return block;
 }
 
 PoolAllocator_t Pool_Create(size_t elem_size, size_t initial_count)
 {
-    PoolAllocator_t alloc = { max(elem_size, sizeof(FreeListNode_t)), NULL, NULL };
-    alloc.blocks = Pool_newBlock(alloc.elem_size, initial_count, &alloc.freelist);
-    return alloc;
+	PoolAllocator_t alloc = { max(elem_size, sizeof(FreeListNode_t)), NULL, NULL };
+	alloc.blocks = Pool_newBlock(alloc.elem_size, initial_count, &alloc.freelist);
+	return alloc;
 }
 
 void* Pool_Allocate(PoolAllocator_t* allocator)

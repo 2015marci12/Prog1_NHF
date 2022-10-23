@@ -65,3 +65,65 @@ entity_t GetCamera(Scene_t* scene, mat4** transform, mat4** projection, mat4* mv
 
 	return View_GetCurrent(&v);
 }
+
+uint32_t collisionEventType = 0;
+
+void FireCollisionEvents(Scene_t* scene)
+{
+	//check everything against everything. Not too efficient but this is the simplest solution.
+	//Should be enough for a simple game.
+	//TODO: switch to spatial partitioning once performance becomes a problem.
+	//TODO: custom event queue if the 65536 max events in the SDL queue becomes the limiting factor somehow.
+	for (View_t outter = View_Create(scene, 2, Component_TRANSFORM, Component_COLLOIDER);
+		!View_End(&outter); View_Next(&outter))
+	{
+		for (View_t inner = View_Create(scene, 2, Component_TRANSFORM, Component_COLLOIDER);
+			!View_End(&inner); View_Next(&inner))
+		{
+			//Avoid checking entites with themselves or duplicate checks.
+			if (View_GetCurrentIndex(&outter) > View_GetCurrentIndex(&inner)
+				&& View_GetCurrent(&outter) == View_GetCurrent(&inner)) //Should be redundant, still here just to be safe.
+			{
+				continue;
+			}
+
+			mat4* transform1 = View_GetComponent(&outter, 0);
+			mat4* transform2 = View_GetComponent(&inner, 0);
+			Colloider* colloider1 = View_GetComponent(&outter, 1);
+			Colloider* colloider2 = View_GetComponent(&inner, 1);
+
+			//Check collision layers.
+			if (
+				(colloider1->layermask & 1ull << (colloider2->layer - 1))
+				&&
+				(colloider2->layermask & 1ull << (colloider1->layer - 1))
+				)
+			{
+				//Calculate the transformed AABBs.
+				vec2 aPos = new_vec2_v4(mat4x4_Mul_v(*transform1, new_vec4_v2(colloider1->body.Pos, 0.f, 1.f))),
+					bPos = new_vec2_v4(mat4x4_Mul_v(*transform2, new_vec4_v2(colloider2->body.Pos, 0.f, 1.f)));
+				Rect aMov = new_Rect_ps(aPos, colloider1->body.Size),
+					bMov = new_Rect_ps(bPos, colloider2->body.Size);
+
+				//Register event if necessary.
+				if (!collisionEventType) collisionEventType = SDL_RegisterEvents(1);
+
+				//Fill out event and check collision.
+				CollisionEvent e;
+				e.a = View_GetCurrent(&outter);
+				e.b = View_GetCurrent(&inner);
+				if (Rect_Intersects(aMov, bMov, &e.normal, &e.penetration))
+				{
+					//Fire collision event. data1: the event parameters; data2: a pointer to the scene.
+					int ret = PushEvent(NULL, collisionEventType, 0, &e, sizeof(CollisionEvent), scene);
+					//Report warning if unsuccessful.
+					if (ret != 1) WARN("Collision events not handled: Failed to push event. Error code %d\n", ret);
+				}
+			}
+			else
+			{
+				continue; //Layer masks incompatible.
+			}
+		}
+	}
+}
