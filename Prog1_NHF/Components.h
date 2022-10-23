@@ -11,6 +11,7 @@ enum ComponentTypes
 	Component_TRANSFORM,
 	Component_SPRITE,
 	Component_CAMERA,
+	Component_COLLOIDER,
 	Component_PLAYER,
 	Component_PLANE,
 };
@@ -59,3 +60,56 @@ typedef struct Relationship
 } Relationship;
 
 //TODO
+
+/*
+* AABB Colloider.
+*/
+typedef struct Colloider 
+{
+	Rect body;
+	uint64_t layermask; //A mask that what layers to check for collisions.
+	uint32_t layer : 6; //64 layers.
+} Colloider;
+
+void FireCollisionEvents(Scene_t* scene) 
+{
+	//check everything against everything. Not too efficient but this is the simplest solution.
+	//Should be enough for a simple game.
+	//TODO: switch to spatial partitioning once performance becomes a problem.
+	for(View_t outter = View_Create(scene, 2, Component_TRANSFORM, Component_COLLOIDER);
+		!View_End(&outter); View_Next(&outter)) 
+	{
+		for (View_t inner = View_Create(scene, 2, Component_TRANSFORM, Component_COLLOIDER);
+			!View_End(&inner); View_Next(&inner))
+		{
+			//Avoid checking entites with themselves
+			if (View_GetCurrent(&outter) == View_GetCurrent(&inner)) 
+			{
+				continue;
+			}
+
+			mat4* transform1 = View_GetComponent(&outter, 0);
+			mat4* transform2 = View_GetComponent(&inner, 0);
+			Colloider* colloider1 = View_GetComponent(&outter, 1);
+			Colloider* colloider2 = View_GetComponent(&inner, 1);
+
+			//Check collision layers.
+			if (
+				(colloider1->layermask & 1 << (colloider2->layer - 1))
+				&& 
+				(colloider2->layermask & 1 << (colloider1->layer - 1))
+				) 
+			{
+				//TODO generate collision manifold and fire event in SDL
+				// TODO create a per-frame linear allocator for event data. (cascading)
+				// the user will clear this each frame after processing the events.
+				// This will allow us to use the SDL event queue for our own purposes.
+				//SDL_PushEvent()
+			} 
+			else
+			{
+				continue; //Layer masks incompatible.
+			}
+		}
+	}
+}
