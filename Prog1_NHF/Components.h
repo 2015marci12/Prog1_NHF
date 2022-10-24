@@ -9,10 +9,12 @@
 enum ComponentTypes
 {
 	Component_NONE = 0,
-	Component_TRANSFORM,
-	Component_SPRITE,
-	Component_CAMERA,
-	Component_COLLOIDER,
+	Component_TRANSFORM, //The world space transform of each entity.
+	Component_SPRITE, //A simple 2d image with some overlays.
+	Component_CAMERA, //The camera the scene will be rendered with.
+	Component_COLLOIDER, //Fires collision events.
+	Component_MOVEMENT, //moves according to the predefined characteristics.
+	Component_LIFETIME, //destroys the entity after some time.
 	Component_PLAYER,
 	Component_PLANE,
 	Component_BULLET,
@@ -91,3 +93,16 @@ uint32_t CollisionEventType();
 * Fire collision events in the scene.
 */
 void FireCollisionEvents(Scene_t* scene);
+
+/*
+* Movement.
+*/
+typedef struct MovementComponent 
+{
+	vec2 velocity;
+	vec2 acceleration;
+	vec2 jerk;
+} MovementComponent;
+
+void RegisterMovement(Scene_t* scene);
+void UpdateMovement(Scene_t* scene, float dt);

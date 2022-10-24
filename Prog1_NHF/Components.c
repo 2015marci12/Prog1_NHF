@@ -140,3 +140,23 @@ void FireCollisionEvents(Scene_t* scene)
 		}
 	}
 }
+
+void RegisterMovement(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_MOVEMENT, MovementComponent);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateMovement(Scene_t* scene, float dt)
+{
+	for (View_t v = View_Create(scene, 2, Component_TRANSFORM, Component_MOVEMENT);
+		!View_End(&v);  View_Next(&v))
+	{
+		mat4* transform = View_GetComponent(&v, 0);
+		MovementComponent* movement = View_GetComponent(&v, 1);
+
+		*transform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), new_vec3_v2(vec2_Mul_s(movement->velocity, dt), 0.f)), *transform);
+		movement->velocity = vec2_Add(movement->velocity, vec2_Mul_s(movement->acceleration, dt));
+		movement->acceleration = vec2_Add(movement->acceleration, vec2_Mul_s(movement->jerk, dt));
+	}
+}
