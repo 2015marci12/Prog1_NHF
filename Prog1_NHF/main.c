@@ -25,7 +25,7 @@ typedef enum CollisionLayer
 #define PLAYER_BULLET_MASK (BIT(Layer_Walls) | BIT(Layer_Enemies) | BIT(Layer_Missiles))
 #define PLAYER_MISSILE_MASK (BIT(Layer_Walls) | BIT(Layer_Enemies) | BIT(Layer_Bullets))
 #define ENEMY_BULLET_MASK (BIT(Layer_Walls) | BIT(Layer_Player) | BIT(Layer_Missiles))
-#define PLAYER_MISSILE_MASK (BIT(Layer_Walls) | BIT(Layer_Player) | BIT(Layer_Bullets))
+//#define PLAYER_MISSILE_MASK (BIT(Layer_Walls) | BIT(Layer_Player) | BIT(Layer_Bullets))
 
 ParticleSystem* particles;
 
