@@ -94,6 +94,7 @@ uint32_t CollisionEventType();
 */
 void FireCollisionEvents(Scene_t* scene);
 
+
 /*
 * Movement.
 */
@@ -105,6 +106,7 @@ typedef struct MovementComponent
 
 void RegisterMovement(Scene_t* scene);
 void UpdateMovement(Scene_t* scene, float dt);
+
 
 /*
 * Lifetime.

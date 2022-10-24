@@ -44,7 +44,36 @@ typedef struct PlaneComponent
 	float mass;
 } PlaneComponent;
 
+typedef struct InputState
+{
+	vec2 LookDir;
+	float Thrust;
+	bool booster;
+	bool firing;
+} InputState;
+
+void ParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* input)
+{
+	//TODO: gamepad controls.
+
+	//Mouse
+	ivec2 screenSize;
+	SDL_GetWindowSize(win, &screenSize.x, &screenSize.y);
+	ivec2 mousePos = GetMousePos(snapshot);
+	ivec2 screenCenter = ivec2_Div_s(screenSize, 2);
+	vec2 mouseDiff = ivec2_to_vec2(ivec2_Sub(mousePos, screenCenter));
+	mouseDiff.y *= -1.f;
+	input->LookDir = vec2_Normalize(mouseDiff);
+	input->Thrust = max(0.f, min(vec2_Len(mouseDiff) / (float)ivec2_Min(screenCenter), 1.f));
+
+	//Buttons.
+	input->booster = IsKeyPressed(snapshot, SDL_SCANCODE_SPACE);
+	input->firing = IsMouseButtonPressed(snapshot, SDL_BUTTON_LEFT);
+}
+
 const float viewport_scale = 10.f;
+const float peek_scale = 2.f;
+
 const float g = 3.f;
 const float thrust_idle = 13.f;
 const float thrust_booster = 25.f;
@@ -79,6 +108,39 @@ GLTexture* explosionTex;
 TextureAtlas explosionAtlas;
 Animation explosionAnim;
 
+//Handle window events.
+bool OnWindowEvent(SDL_Event* e, void* userData) 
+{
+	//Translate pointers.
+	SDL_WindowEvent* we = &e->window;
+	Scene_t* scene = userData;
+
+	//Get camera.
+	mat4* projection;
+	GetCamera(scene, NULL, &projection, NULL);
+
+	//Handle resize.
+	if (we->event = SDL_WINDOWEVENT_RESIZED) 
+	{
+		//Get width and height.
+		int w = we->data1, h = we->data2;
+
+		//Return if minimized.
+		if (h <= 0 || w <= 0) return true; 
+
+		//Set viewport.
+		glViewport(0, 0, w, h);
+
+		//Set camera.
+		float aspect = (float)w / (float)h;
+		*projection = mat4_Ortho(-aspect * viewport_scale, aspect * viewport_scale, viewport_scale, -viewport_scale, -1000, 1000);
+
+		return true;
+	}
+
+	return false;
+}
+
 bool explosionUpdateFun(Particle* p, float dt) 
 {
 	float seconds = GetElapsedSeconds(p->spawnTimer);
@@ -98,10 +160,9 @@ void Explosion(mat4 transform, vec2 size)
 	Particles_Emit(particles, p);
 }
 
-void UpdatePlayer(Scene_t* scene, float dt)
+void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 {
 	View_t view = View_Create(scene, 5, Component_TRANSFORM, Component_PLAYER, Component_MOVEMENT, Component_SPRITE, Component_PLANE);
-	InputSnapshot_t input = GetInput();
 
 	mat4* transform = View_GetComponent(&view, 0);
 	PlayerComponent* pc = View_GetComponent(&view, 1);
@@ -110,23 +171,17 @@ void UpdatePlayer(Scene_t* scene, float dt)
 	Sprite* sprite = View_GetComponent(&view, 3);
 
 	vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-	ivec2 screenSize;
-	SDL_GetWindowSize(window, &screenSize.x, &screenSize.y);
-	ivec2 mousePos = GetMousePos(&input);
-	ivec2 screenCenter = ivec2_Div_s(screenSize, 2);
-	vec2 mouseDiff = ivec2_to_vec2(ivec2_Sub(mousePos, screenCenter));
-	mouseDiff.y *= -1.f;
 
 	//Look at mouse.
-	float angle = vec2_Angle(mouseDiff);
+	float angle = vec2_Angle(input->LookDir);
 	*transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), Pos), angle, new_vec3(0.f, 0.f, 1.f));
 
 	if (mc->velocity.x < 0) *transform = mat4_Scale(*transform, new_vec3(1.f, -1.f, 1.f)); //Invert sprite if the velocity is facing the other way.
 
 	//scale thrust.
 	float thrust = thrust_idle;
-	thrust *= max(0.f, min(vec2_Len(mouseDiff) / (float)ivec2_Min(screenCenter), 1.f));
-	if (IsKeyPressed(&input, SDL_SCANCODE_SPACE))
+	thrust *= input->Thrust;
+	if (input->booster)
 	{
 		thrust = thrust_booster;
 
@@ -171,7 +226,7 @@ void UpdatePlayer(Scene_t* scene, float dt)
 	pm->thrust = thrust;
 
 	//shooting.
-	if (IsMouseButtonPressed(&input, SDL_BUTTON_LEFT))
+	if (input->firing)
 	{
 		//cannon animation.
 		Timer_t timer = { 0 };
@@ -211,6 +266,22 @@ void UpdatePlayer(Scene_t* scene, float dt)
 	{
 		sprite->overlays[1] = SubTexture_empty();
 	}
+}
+
+void UpdateCamera(Scene_t* scene, InputState* input) 
+{
+	//Camera.
+	mat4* transform;
+	entity_t camera = GetCamera(scene, &transform, NULL, NULL);
+
+	//Get player.
+	View_t v = View_Create(scene, 2, Component_TRANSFORM, Component_PLAYER);
+	mat4* playertransform = View_GetComponent(&v, 0);
+
+	//Set camera position.
+	vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*playertransform, new_vec4(0.f, 0.f, 0.f, 1.f))); //Get the position of the player.
+	Pos = vec3_Add(Pos, new_vec3_v2(vec2_Mul_s(input->LookDir, input->Thrust * peek_scale), 0.f)); //Shift it towards the cursor.
+	*transform = mat4_Translate(mat4x4_Identity(), Pos); //Set transfrom.
 }
 
 void MovePlanes(Scene_t* scene, float dt)
@@ -266,7 +337,7 @@ int main(int argc, char* argv[])
 
 	window = SDL_CreateWindow("SDL peldaprogram",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		1920, 1080,
+		660, 480,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 	if (window == NULL)
@@ -340,45 +411,53 @@ int main(int argc, char* argv[])
 	entity_t came = Scene_CreateEntity(scene);
 	mat4* cam_tr = Scene_AddComponent(scene, came, Component_TRANSFORM);
 	Camera* cam = Scene_AddComponent(scene, came, Component_CAMERA);
-	*cam_tr = mat4x4_Identity();
-	
+	*cam_tr = mat4x4_Identity();	
 	*cam = mat4_Ortho(-aspect * viewport_scale, aspect * viewport_scale, viewport_scale, -viewport_scale, -1000, 1000);
 
 	Timer_t timer = MakeTimer();
+
+	InputState inputstate;
 
 	EventDispatcher_t ev;
 	bool exit = false;
 	while (!exit)
 	{
+		//Events.
 		while (GetEvent(&ev))
 		{
 			//Dispatch events.
+			DispatchEvent(&ev, SDL_WINDOWEVENT, OnWindowEvent, scene);
+
 			exit |= !ev.handled && ev.e.type == SDL_QUIT; //Exit once there is an unhandled QUIT event.
 		}
+		ResetUserEventMemory(); //Reset user event allocator.
 
+		//Timing.
 		float timediff = GetElapsedSeconds(timer);
 		timer = MakeTimer();
 
-		Renderer2D_Clear(&renderer, new_vec4_v(0.f));
+		//Input.
+		InputSnapshot_t snapshot = GetInput();	
+		ParseInput(window, &snapshot, &inputstate);
 
+		//Update.
 		MovePlanes(scene, timediff);
-		UpdatePlayer(scene, timediff);
+		UpdatePlayer(scene, &inputstate, timediff);
 		UpdateMovement(scene, timediff);
 		UpdateLifetimes(scene);
+		UpdateCamera(scene, &inputstate);
+		Particles_Update(particles, timediff);
 
+		//Rendering.
 		mat4 camera;
 		GetCamera(scene, &cam_tr, &cam, &camera);
 
-		Particles_Update(particles, timediff);
+		Renderer2D_Clear(&renderer, new_vec4_v(0.f)); //Clear screen.
+		RenderSprites(scene, &renderer, camera); //Draw sprites.
+		Particles_Draw(particles, &renderer, camera); //Draw particles.
 
-		RenderSprites(scene, &renderer, camera);
-
-		tr = Scene_Get(scene, e, Component_TRANSFORM);
-		vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		*cam_tr = mat4_Translate(mat4x4_Identity(), Pos);
-
+		//Render test background.
 		Renderer2D_BeginScene(&renderer, camera);
-
 		vec2 camPos = new_vec2_v4(mat4x4_Mul_v(*cam_tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
 		for (float x = camPos.x - aspect * viewport_scale; x < camPos.x + aspect * viewport_scale; x++)
 		{
@@ -399,11 +478,7 @@ int main(int argc, char* argv[])
 				new_vec4_v(1.f)
 			);
 		}
-
 		Renderer2D_EndScene(&renderer);
-
-		//Draw particles.
-		Particles_Draw(particles, &renderer, camera);
 
 		SDL_GL_SwapWindow(window);
 
