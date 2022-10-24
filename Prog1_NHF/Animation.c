@@ -36,7 +36,7 @@ SubTexture SubTexture_empty()
 
 SubTexture Animation_GetAt(Animation* animation, float time, float* overtime)
 {
-	if (animation)
+	if (animation && animation->frameCount)
 	{
 		uint32_t frame = ((uint32_t)(time / animation->frameTime)) % animation->frameCount;
 		if (overtime) *overtime = time - (animation->frameTime * animation->frameCount);
@@ -52,7 +52,7 @@ typedef struct AnimIniLoadTemp
 	struct { uvec2 tile, size; } frames[MAX_ANIMATION_FRAMES];
 } AnimIniLoadTemp;
 
-static int iniHandler(void* user, const char* section, const char* name,
+static int iniHandler(const void* user, const char* section, const char* name,
 	const char* value)
 {
 	AnimIniLoadTemp* data = (AnimIniLoadTemp*)user;
@@ -64,13 +64,13 @@ static int iniHandler(void* user, const char* section, const char* name,
 		else
 		{
 			ERROR("Failed animation INI parse: unknown name %s\n", name);
-			return 0;
+			return -1;
 		}
 	}
 	else 
 	{
 		uint32_t frameNum = -1;
-		if ((sscanf_s(section, "frame%d", &frameNum) == 1)
+		if ((sscanf_s(section, "frame%d", &frameNum) > 0)
 			&& (frameNum != -1)
 			&& (frameNum < data->frameCount))
 		{
@@ -81,22 +81,22 @@ static int iniHandler(void* user, const char* section, const char* name,
 			else 
 			{
 				ERROR("Failed animation INI parse: unknown name %s\n", name);
-				return 0;
+				return -1;
 			}
 		}
 		else
 		{
 			ERROR("Failed animation INI parse: unknown section name %s\n", section);
-			return 0;
+			return -1;
 		};
 	}
-	return 1;
+	return 0;
 }
 
 bool Animation_FromIni(const char* filename, Animation* anim, TextureAtlas* atlas)
 {
 	AnimIniLoadTemp temp;
-	if(ini_parse(filename, iniHandler, &temp) < 0) return false;
+	if(mIni_File(filename, iniHandler, &temp) < 0) return false;
 
 	anim->frameCount = temp.frameCount;
 	anim->frameTime = temp.frameTime;

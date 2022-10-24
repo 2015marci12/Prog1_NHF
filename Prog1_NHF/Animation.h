@@ -2,8 +2,7 @@
 #include "Core.h"
 #include "Log.h"
 #include "Graphics.h"
-
-#include <ini.h>
+#include "mIni.h"
 
 typedef struct TextureAtlas 
 {

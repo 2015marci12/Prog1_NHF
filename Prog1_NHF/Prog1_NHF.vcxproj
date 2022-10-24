@@ -27,6 +27,7 @@
     <ClCompile Include="Input.c" />
     <ClCompile Include="LinearAllocator.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="mIni.c" />
     <ClCompile Include="ParticleSystem.c" />
     <ClCompile Include="PoolAllocator.c" />
     <ClCompile Include="Random.c" />
@@ -47,6 +48,7 @@
     <ClInclude Include="LinearAllocator.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="Mathcell.h" />
+    <ClInclude Include="mIni.h" />
     <ClInclude Include="ParticleSystem.h" />
     <ClInclude Include="PoolAllocator.h" />
     <ClInclude Include="Random.h" />
