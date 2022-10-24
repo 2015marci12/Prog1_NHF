@@ -5,6 +5,7 @@
 #include "Renderer2D.h"
 #include "Animation.h"
 #include "Input.h"
+#include "Timer.h"
 
 enum ComponentTypes
 {
@@ -14,10 +15,9 @@ enum ComponentTypes
 	Component_CAMERA, //The camera the scene will be rendered with.
 	Component_COLLOIDER, //Fires collision events.
 	Component_MOVEMENT, //moves according to the predefined characteristics.
-	Component_LIFETIME, //destroys the entity after some time.
+	Component_LIFETIME, //destroys the entity after some time and calls the callback beforehand.
 	Component_PLAYER,
 	Component_PLANE,
-	Component_BULLET,
 };
 
 /*
@@ -101,8 +101,23 @@ typedef struct MovementComponent
 {
 	vec2 velocity;
 	vec2 acceleration;
-	vec2 jerk;
 } MovementComponent;
 
 void RegisterMovement(Scene_t* scene);
 void UpdateMovement(Scene_t* scene, float dt);
+
+/*
+* Lifetime.
+*/
+typedef bool(*LifetimeCallback_t)(Scene_t* scene, entity_t e, const void* userdata);
+typedef struct LifetimeComponent 
+{
+	Timer_t timer;
+	float lifetime;
+	const void* userdata;
+
+	LifetimeCallback_t callback;
+} LifetimeComponent;
+
+void RegisterLifetime(Scene_t* scene);
+void UpdateLifetimes(Scene_t* scene);

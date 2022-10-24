@@ -157,6 +157,27 @@ void UpdateMovement(Scene_t* scene, float dt)
 
 		*transform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), new_vec3_v2(vec2_Mul_s(movement->velocity, dt), 0.f)), *transform);
 		movement->velocity = vec2_Add(movement->velocity, vec2_Mul_s(movement->acceleration, dt));
-		movement->acceleration = vec2_Add(movement->acceleration, vec2_Mul_s(movement->jerk, dt));
+	}
+}
+
+void RegisterLifetime(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_LIFETIME, LifetimeComponent);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateLifetimes(Scene_t* scene)
+{
+	View_t v = View_Create(scene, 1, Component_LIFETIME);
+	while (!View_End(&v))
+	{
+		LifetimeComponent* lifetime = View_GetComponent(&v, 0);
+		if (GetElapsedSeconds(lifetime->timer) >= lifetime->lifetime)
+		{
+			if (!lifetime->callback) View_DestroyCurrent_FindNext(&v);
+			else if (!(lifetime->callback)(scene, View_GetCurrent(&v), lifetime->userdata)) View_DestroyCurrent_FindNext(&v);
+			else View_Next(&v);
+		}
+		else View_Next(&v);
 	}
 }

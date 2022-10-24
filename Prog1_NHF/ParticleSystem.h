@@ -8,7 +8,7 @@ struct Particle;
 
 typedef bool(*ParticleFun_t)(struct Particle*, float dt);
 
-
+//TODO rework
 typedef struct Particle 
 {
 	mat4 transform;
