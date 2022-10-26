@@ -71,9 +71,6 @@
     <ClInclude Include="Mathcell.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GL\Buffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Graphics.h">
       <Filter>Header Files</Filter>
     </ClInclude>

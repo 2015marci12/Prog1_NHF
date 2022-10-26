@@ -41,7 +41,6 @@
     <ClInclude Include="Core.h" />
     <ClInclude Include="debugmalloc.h" />
     <ClInclude Include="ECS.h" />
-    <ClInclude Include="GL\Buffer.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />
     <ClInclude Include="Input.h" />

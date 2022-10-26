@@ -160,6 +160,13 @@ void Explosion(mat4 transform, vec2 size)
 	Particles_Emit(particles, p);
 }
 
+bool SpawnExplosion(Scene_t* scene, entity_t e, const void* d) 
+{
+	mat4* transform = Scene_Get(scene, e, Component_TRANSFORM);
+	Explosion(*transform, new_vec2_v(2.f));
+	return false;
+}
+
 void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 {
 	View_t view = View_Create(scene, 5, Component_TRANSFORM, Component_PLAYER, Component_MOVEMENT, Component_SPRITE, Component_PLANE);
@@ -260,6 +267,7 @@ void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 			lt->lifetime = bullet_lifeTime;
 			lt->userdata = NULL;
 			lt->callback = NULL; //TODO go poof when done.
+			lt->callback = SpawnExplosion; 
 		}
 	}
 	else
@@ -326,6 +334,9 @@ void MovePlanes(Scene_t* scene, float dt)
 
 int main(int argc, char* argv[])
 {
+#ifdef _DEBUG
+#endif // _DEBUG
+
 	/* SDL inicializálása és ablak megnyitása */
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 	{
@@ -367,6 +378,8 @@ int main(int argc, char* argv[])
 	Animation_FromIni("CannonAnim.ini", &cannonAnim, &atlas);
 	Animation_FromIni("MissileAnim.ini", &missileAnim, &weaponsAtlas);
 	Animation_FromIni("ExplosionAnim.ini", &explosionAnim, &explosionAtlas);
+
+	ASSERT(bulletSubTex.texture, "\n");
 
 	//Add components.
 	Scene_t* scene = Scene_New();

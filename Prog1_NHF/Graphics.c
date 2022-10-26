@@ -1,6 +1,12 @@
 #include "Graphics.h"
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_image.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#ifdef _DEBUG
+#	define STBI_MALLOC(S) debugmalloc_malloc_full((S), "malloc", #S, __FILE__, __LINE__, false)
+#	define STBI_REALLOC(P,S) debugmalloc_realloc_full((P), (S), "realloc", #S, __FILE__, __LINE__)
+#	define STBI_FREE(P) debugmalloc_free_full((P), "free", __FILE__, __LINE__)
+#endif
+#include <stb_image.h>
 
 void GLAPIENTRY
 MessageCallback(GLenum source,
@@ -421,6 +427,7 @@ void GLTexture_Upload(GLTexture* ptr, uint32_t level, GLFormat pixelFormat, uvec
 	case GLTextureType_Cube:
 		glTextureSubImage2D(ptr->_Priv.NativeHandle, level, offset.x, offset.y, size.x, size.y, format, type, data); break;
 	default:
+		ASSERT(false, "\n");
 		break;
 	}
 }
@@ -431,117 +438,19 @@ void GLTexture_BindUnit(GLTexture* ptr, uint32_t unit)
 	glBindTextures(unit, 1, &ptr->_Priv.NativeHandle);
 }
 
-void flip_surface(SDL_Surface* surface)
-{
-	SDL_LockSurface(surface);
-
-	int pitch = surface->pitch; // row size
-	char* temp = malloc(pitch); // intermediate buffer
-	char* pixels = (char*)surface->pixels;
-
-	for (int i = 0; i < surface->h / 2; ++i) {
-		// get pointers to the two rows to swap
-		char* row1 = pixels + i * pitch;
-		char* row2 = pixels + (surface->h - i - 1) * pitch;
-
-		// swap rows
-		memcpy(temp, row1, pitch);
-		memcpy(row1, row2, pitch);
-		memcpy(row2, temp, pitch);
-	}
-
-	free(temp);
-
-	SDL_UnlockSurface(surface);
-}
-
-uint32_t getPixel(SDL_Surface* surface, int x, int y)
-{
-	int bpp = surface->format->BytesPerPixel;
-	/* Here p is the address to the pixel we want to retrieve */
-	Uint8* p = (Uint8*)surface->pixels + y * surface->pitch + x * bpp;
-
-	switch (bpp) {
-	case 1:
-		return *p;
-
-	case 2:
-		return *(Uint16*)p;
-
-	case 3:
-		if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
-			return p[0] << 16 | p[1] << 8 | p[2];
-		else
-			return p[0] | p[1] << 8 | p[2] << 16;
-
-	case 4:
-		return *(Uint32*)p;
-
-	default:
-		return 0;       /* shouldn't happen, but avoids warnings */
-	}
-}
-
-char* ConvertSurfaceRGBA8(SDL_Surface* surface) 
-{
-	char* c = malloc(4 * surface->w * surface->h);
-	for(int x = 0; x < surface->w; x++)
-		for (int y = 0; y < surface->h; y++) 
-		{
-			char* colors = &c[4 * (surface->w * y + x)];
-			uint32_t color = getPixel(surface, x, y);
-			SDL_GetRGBA(color, surface->format, &colors[0], &colors[1], &colors[2], &colors[3]);
-		}
-	return c;
-}
-
 GLTexture* LoadTex2D(const char* path)
 {
-	SDL_Surface* surface = IMG_Load(path);
-	if (!surface->h) { ERROR("Failed to load texture: %s\n", path); return NULL; };
+	stbi_set_flip_vertically_on_load(true);
 
-	int nOfColors = surface->format->BytesPerPixel;
-	uint32_t texture_format;
-	char* temp = NULL;
-	if (nOfColors == 4)     // contains an alpha channel
-	{
-		if (surface->format->Rmask == 0x000000ff)
-			texture_format = GLFormat_RGBA;
-		else
-			texture_format = GLFormat_BGRA;
-	}
-	else if (nOfColors == 3)     // no alpha channel
-	{
-		if (surface->format->Rmask == 0x000000ff)
-			texture_format = GLFormat_RGB;
-		else 
-		{
-			texture_format = GLFormat_RGBA;
-			//Format conversion necessary.
-			temp = ConvertSurfaceRGBA8(surface);
-		}
-	}
-	else 
-	{
+	char* data = NULL;
+	int w, h, nC;
+	data = stbi_load(path, &w, &h, &nC, STBI_rgb_alpha);
 
-		texture_format = GLFormat_RGBA;
-		//Format conversion necessary.
-		temp = ConvertSurfaceRGBA8(surface);
-	}
+	if (!data) { ERROR("Failed to load texture: %s\n", path); return NULL; };
 
-	flip_surface(surface);
+	GLTexture* tex = GLTexture_Create(GLTextureType_2D, GLFormat_RGBA, new_uvec3(w, h, 1), 1);
+	GLTexture_Upload(tex, 0, GLFormat_RGBA, new_uvec3_v(0), tex->Size, data);
 
-	GLTexture* tex = GLTexture_Create(GLTextureType_2D, texture_format, new_uvec3(surface->w, surface->h, 1), 1);
-	if (!temp) 
-	{
-		GLTexture_Upload(tex, 0, texture_format, new_uvec3_v(0.f), tex->Size, surface->pixels);
-	}
-	else 
-	{
-		GLTexture_Upload(tex, 0, GLFormat_RGBA, new_uvec3_v(0.f), tex->Size, temp);
-	}
-
-	SDL_FreeSurface(surface);
-	if (temp) free(temp);
+	stbi_image_free(data);
 	return tex;
 }
