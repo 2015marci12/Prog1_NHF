@@ -173,6 +173,7 @@ void Scene_DeleteEntity(Scene_t* ptr, entity_t entity);
 
 bool Scene_Has(Scene_t* ptr, entity_t entity, componentid_t cid);
 void* Scene_Get(Scene_t* ptr, entity_t entity, componentid_t cid);
+void* Scene_Get_Or_Emplace(Scene_t* ptr, entity_t entity, componentid_t cid, void* defaultData);
 void* Scene_AddComponent(Scene_t* ptr, entity_t entity, componentid_t cid);
 void Scene_RemoveComponent(Scene_t* ptr, entity_t entity, componentid_t cid);
 

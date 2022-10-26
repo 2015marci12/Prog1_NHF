@@ -6,6 +6,17 @@ void RegisterTransform(Scene_t* scene)
 	Scene_AddComponentType(scene, trinf);
 }
 
+mat4 CalcWorldTransform(Scene_t* scene, entity_t e)
+{
+	mat4 transform = mat4x4_Identity();
+	for (entity_t entity = e; Scene_EntityValid(scene, entity); entity = Parent(scene, entity)) 
+	{
+		mat4* tr = Scene_Get(scene, entity, Component_TRANSFORM);
+		if(tr) transform = mat4x4x4_Mul(*tr, transform);
+	}
+	return transform;
+}
+
 void RegisterSprite(Scene_t* scene)
 {
 	ComponentInfo_t cinf = COMPONENT_DEF(Component_SPRITE, Sprite);
@@ -20,17 +31,16 @@ void RenderSprites(Scene_t* scene, Renderer2D* renderer, mat4 cameraMVP)
 	for (View_t sprites = View_Create(scene, 2, Component_TRANSFORM, Component_SPRITE);
 		!View_End(&sprites); View_Next(&sprites))
 	{
-		mat4* transform = View_GetComponent(&sprites, 0);
+		mat4 transform = CalcWorldTransform(scene, View_GetCurrent(&sprites));
 		Sprite* sprite = View_GetComponent(&sprites, 1);
 
-		Renderer2D_DrawSprite(renderer, *transform, sprite->size, sprite->tintColor, sprite->subTex);
+		Renderer2D_DrawSprite(renderer, transform, sprite->size, sprite->tintColor, sprite->subTex);
 		for (int i = 0; i < MAX_ANIM_OVERLAY_COUNT; i++)
 		{
 			//Render overlay if applicable.
 			if (sprite->overlays[i].texture != NULL)
 			{
-				mat4 tr = mat4_Translate(*transform, new_vec3(0.f, 0.f, i * 0.01f));
-				Renderer2D_DrawSprite(renderer, tr, sprite->size, sprite->tintColor, sprite->overlays[i]);
+				Renderer2D_DrawSprite(renderer, transform, sprite->size, sprite->tintColor, sprite->overlays[i]);
 			}
 		}
 	}
@@ -64,6 +74,135 @@ entity_t GetCamera(Scene_t* scene, mat4** transform, mat4** projection, mat4* mv
 	if (mvp) { *mvp = mat4x4x4_Mul(*proj, mat4_Inverse(*tr)); }
 
 	return View_GetCurrent(&v);
+}
+
+void RegisterRelationship(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_RELATIONSHIP, Relationship);
+	Scene_AddComponentType(scene, cinf);
+}
+
+Relationship Rel_init()
+{
+	Relationship ret;
+	ret.children = 0;
+	ret.parent = -1;
+	ret.prevSibling = -1;
+	ret.nextSibling = -1;
+	ret.firstChild = -1;
+	return ret;
+}
+
+entity_t Parent(Scene_t* scene, entity_t e)
+{
+	Relationship* rel = Scene_Get(scene, e, Component_RELATIONSHIP);
+	if (!rel) return -1;
+	return rel->parent;
+}
+
+entity_t FirstChild(Scene_t* scene, entity_t e)
+{
+	Relationship* rel = Scene_Get(scene, e, Component_RELATIONSHIP);
+	if (!rel) return -1;
+	return rel->firstChild;
+}
+
+entity_t NextSibling(Scene_t* scene, entity_t e)
+{
+	Relationship* rel = Scene_Get(scene, e, Component_RELATIONSHIP);
+	if (!rel) return -1;
+	return rel->nextSibling;
+}
+
+entity_t PrevSibling(Scene_t* scene, entity_t e)
+{
+	Relationship* rel = Scene_Get(scene, e, Component_RELATIONSHIP);
+	if (!rel) return -1;
+	return rel->prevSibling;
+}
+
+bool RelationshipEnd(Scene_t* scene, entity_t e) { return !Scene_EntityValid(scene, e); }
+
+void RemoveChild(Scene_t* scene, entity_t parent, entity_t child)
+{
+	ASSERT(Scene_EntityValid(scene, parent) && Scene_EntityValid(scene, parent), "Parent and child must be valid!\n");
+	Relationship* pr = Scene_Get(scene, parent, Component_RELATIONSHIP);
+	Relationship* cr = Scene_Get(scene, child, Component_RELATIONSHIP);
+	ASSERT(pr && cr, "Parent and child must have relationship components!\n");
+	//First child case.
+	if (pr->firstChild == child)
+	{
+		pr->firstChild = cr->nextSibling;
+		if (!RelationshipEnd(scene, cr->nextSibling))
+		{
+			Relationship* nsr = Scene_Get(scene, cr->nextSibling, Component_RELATIONSHIP);
+			nsr->prevSibling = -1;
+		}
+	}
+	else
+	{
+		//Otherwise tie the doubly linked list together.
+		if (!RelationshipEnd(scene, cr->nextSibling))
+		{
+			Relationship* nsr = Scene_Get(scene, cr->nextSibling, Component_RELATIONSHIP);
+			nsr->prevSibling = cr->prevSibling;
+		}
+		if (!RelationshipEnd(scene, cr->prevSibling))
+		{
+			Relationship* psr = Scene_Get(scene, cr->prevSibling, Component_RELATIONSHIP);
+			psr->nextSibling = cr->nextSibling;
+		}
+	}
+	cr->parent = -1;
+	pr->children--;
+}
+
+void AddChild(Scene_t* scene, entity_t parent, entity_t child)
+{
+	Relationship default_rel = Rel_init();
+	ASSERT(Scene_EntityValid(scene, parent) && Scene_EntityValid(scene, parent), "Parent and child must be valid!\n");
+	Relationship* pr = Scene_Get_Or_Emplace(scene, parent, Component_RELATIONSHIP, &default_rel);
+	Relationship* cr = Scene_Get_Or_Emplace(scene, child, Component_RELATIONSHIP, &default_rel);
+
+	//Remove from previous relationship.
+	if (Scene_EntityValid(scene, cr->parent))
+	{
+		RemoveChild(scene, cr->parent, child);
+	}
+
+	//Add to the beginning of the new linked list.
+	cr->parent = parent;
+	cr->nextSibling = pr->firstChild;
+	pr->firstChild = child;
+	pr->children++;
+}
+
+void RemoveChildren(Scene_t* scene, entity_t e)
+{
+	entity_t next = -1;
+	for (entity_t current = FirstChild(scene, e); Scene_EntityValid(scene, current); current = next) 
+	{
+		next = NextSibling(scene, current);
+		RemoveChild(scene, e, current);
+	}
+}
+
+void KillChildren(Scene_t* scene, entity_t e)
+{
+	entity_t next = -1;
+	for (entity_t current = FirstChild(scene, e); Scene_EntityValid(scene, current); current = next)
+	{
+		next = NextSibling(scene, current);
+		RemoveChild(scene, e, current);
+		KillChildren(scene, current);
+		Scene_DeleteEntity(scene, current);
+	}
+}
+
+void Orphan(Scene_t* scene, entity_t e)
+{
+	entity_t parent = Parent(scene, e);
+	if (Scene_EntityValid(scene, e)) RemoveChild(scene, parent, e);
 }
 
 uint32_t collisionEventType = 0;
@@ -101,8 +240,8 @@ void FireCollisionEvents(Scene_t* scene)
 			}
 
 			//Get components.
-			mat4* transform1 = View_GetComponent(&outter, 0);
-			mat4* transform2 = View_GetComponent(&inner, 0);
+			mat4 transform1 = CalcWorldTransform(scene, View_GetCurrent(&outter));
+			mat4 transform2 = CalcWorldTransform(scene, View_GetCurrent(&inner));
 			Colloider* colloider1 = View_GetComponent(&outter, 1);
 			Colloider* colloider2 = View_GetComponent(&inner, 1);
 
@@ -119,8 +258,8 @@ void FireCollisionEvents(Scene_t* scene)
 			if (e.AWantedToColloideWithB || e.BWantedToColloideWithA) //Check collison if either entity wants to check the other.
 			{
 				//Calculate the transformed AABBs. TODO may want to recalculate the size according to rotation.
-				vec2 aPos = new_vec2_v4(mat4x4_Mul_v(*transform1, new_vec4_v2(colloider1->body.Pos, 0.f, 1.f))),
-					bPos = new_vec2_v4(mat4x4_Mul_v(*transform2, new_vec4_v2(colloider2->body.Pos, 0.f, 1.f)));
+				vec2 aPos = new_vec2_v4(mat4x4_Mul_v(transform1, new_vec4_v2(colloider1->body.Pos, 0.f, 1.f))),
+					bPos = new_vec2_v4(mat4x4_Mul_v(transform2, new_vec4_v2(colloider2->body.Pos, 0.f, 1.f)));
 				Rect aMov = new_Rect_ps(aPos, colloider1->body.Size),
 					bMov = new_Rect_ps(bPos, colloider2->body.Size);
 
@@ -180,4 +319,15 @@ void UpdateLifetimes(Scene_t* scene)
 		}
 		else View_Next(&v);
 	}
+}
+
+void RegisterStandardComponents(Scene_t* scene)
+{
+	RegisterTransform(scene);
+	RegisterSprite(scene);
+	RegisterCamera(scene);
+	RegisterRelationship(scene);
+	RegisterColloider(scene);
+	RegisterMovement(scene);
+	RegisterLifetime(scene);
 }

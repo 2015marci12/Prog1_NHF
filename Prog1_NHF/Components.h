@@ -13,6 +13,7 @@ enum ComponentTypes
 	Component_TRANSFORM, //The world space transform of each entity.
 	Component_SPRITE, //A simple 2d image with some overlays.
 	Component_CAMERA, //The camera the scene will be rendered with.
+	Component_RELATIONSHIP, //Entity hierarchy.
 	Component_COLLOIDER, //Fires collision events.
 	Component_MOVEMENT, //moves according to the predefined characteristics.
 	Component_LIFETIME, //destroys the entity after some time and calls the callback beforehand.
@@ -24,6 +25,7 @@ enum ComponentTypes
 * Transform
 */
 void RegisterTransform(Scene_t* scene);
+mat4 CalcWorldTransform(Scene_t* scene, entity_t e);
 
 
 /*
@@ -57,13 +59,33 @@ entity_t GetCamera(Scene_t* scene, mat4** transform, mat4** projection, mat4* mv
 */
 typedef struct Relationship
 {
+	size_t children;
 	entity_t parent;
 	entity_t prevSibling;
 	entity_t nextSibling;
 	entity_t firstChild;
 } Relationship;
 
-//TODO
+void RegisterRelationship(Scene_t* scene);
+Relationship Rel_init();
+
+//Iteration / Query:
+
+entity_t Parent(Scene_t* scene, entity_t e);
+entity_t FirstChild(Scene_t* scene, entity_t e);
+entity_t NextSibling(Scene_t* scene, entity_t e);
+entity_t PrevSibling(Scene_t* scene, entity_t e);
+bool RelationshipEnd(Scene_t* scene, entity_t e);
+
+//Modification:
+
+void RemoveChild(Scene_t* scene, entity_t parent, entity_t child);
+void AddChild(Scene_t* scene, entity_t parent, entity_t child);
+void RemoveChildren(Scene_t* scene, entity_t e);
+//Recursively destroy all children and their hierarchies.
+void KillChildren(Scene_t* scene, entity_t e);
+void Orphan(Scene_t* scene, entity_t e);
+
 
 /*
 * AABB Colloider.
@@ -123,3 +145,5 @@ typedef struct LifetimeComponent
 
 void RegisterLifetime(Scene_t* scene);
 void UpdateLifetimes(Scene_t* scene);
+
+void RegisterStandardComponents(Scene_t* scene);

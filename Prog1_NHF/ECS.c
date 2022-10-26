@@ -374,6 +374,19 @@ void* Scene_Get(Scene_t* ptr, entity_t entity, componentid_t cid)
 	return storage ? ComponentStorage_Get(storage, entity) : NULL;
 }
 
+void* Scene_Get_Or_Emplace(Scene_t* ptr, entity_t entity, componentid_t cid, void* defaultData)
+{
+	ComponentStorage_t* storage = Scene_GetStorage(ptr, cid);
+	ASSERT(storage, "Storage must be present!\n");
+	void* data = ComponentStorage_Get(storage, entity);
+	if (!data) 
+	{
+		data = ComponentStorage_Emplace(storage, entity);
+		memcpy(data, defaultData, storage->comp.size);
+	}
+	return data;
+}
+
 void* Scene_AddComponent(Scene_t* ptr, entity_t entity, componentid_t cid)
 {
 	ASSERT(ptr, "Scene_AddComponent does not permit ptr to be NULL");

@@ -89,6 +89,9 @@ const float bullet_velocity = 20.f;
 const float bullet_lifeTime = 1.f;
 const float bullet_damage = 1.f;
 
+const float arena_width = 100.f;
+const float arena_height = 20.f;
+
 SDL_Window* window;
 
 GLTexture* tex;
