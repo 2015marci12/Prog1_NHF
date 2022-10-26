@@ -9,7 +9,7 @@ PoolBlock_t* Pool_newBlock(size_t elem_size, size_t count, FreeListNode_t** free
 	block->next = NULL;
 	for(char* ptr = block->data; ptr != &block->data[totalSize]; ptr += elem_size)
 	{
-		FreeListNode_t* temp = ptr;
+		FreeListNode_t* temp = (FreeListNode_t*)ptr;
 		temp->next = *freelist;
 		*freelist = temp;
 	}

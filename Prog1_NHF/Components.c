@@ -107,7 +107,7 @@ void FireCollisionEvents(Scene_t* scene)
 			Colloider* colloider2 = View_GetComponent(&inner, 1);
 
 			//Prefill predictable event data.
-			CollisionEvent e;
+			CollisionEvent e = {0};
 			e.a = View_GetCurrent(&outter);
 			e.b = View_GetCurrent(&inner);
 

@@ -53,7 +53,7 @@ size_t SparseMap_Emplace(SparseMap_t* ptr, entity_t entity)
 	ASSERT(entity != -1, "SparseMap_Emplace does not permit entity to be invalid (-1)!");
 	if (entity >= ptr->sparse_size) //Realloc sparse if needed.
 	{
-		size_t newSize = entity + 1;
+		size_t newSize = (size_t)entity + 1ull;
 		ptr->sparse = (entity_t*)realloc(ptr->sparse, newSize * sizeof(entity_t));
 		memset(ptr->sparse + ptr->sparse_size, UINT32_MAX, newSize - ptr->sparse_size);
 		ptr->sparse_size = newSize;
@@ -240,13 +240,13 @@ entity_t Scene_CreateEntity(Scene_t* ptr)
 	//Expand the entity array.
 	size_t newsize = max(ptr->size * 2, 1024);
 	ptr->entities = realloc(ptr->entities, newsize * sizeof(entity_t));
-	for (entity_t i = newsize - 1; i > ptr->size; i--)
+	for (entity_t i = (entity_t)newsize - 1; i > ptr->size; i--)
 	{
 		ptr->entities[i] = ptr->freelist;
 		ptr->freelist = i;
 	}
 	ptr->entities[ptr->size] = ptr->freelist;
-	ptr->freelist = ptr->size;
+	ptr->freelist = (entity_t)ptr->size;
 	ptr->size = newsize;
 
 	//Recurse.
@@ -316,7 +316,7 @@ View_t View_Create(Scene_t* scene, size_t numComponents, ...)
 	//Checks and init.
 	ASSERT(scene, "View_Create does not permit scene to be NULL!");
 	ASSERT(numComponents < VIEW_MAX_COMPONENTS, "Cannot create view with more than %d component types. Increase VIEW_MAX_COMPONENTS.", VIEW_MAX_COMPONENTS);
-	View_t ret;
+	View_t ret = {0};
 	ret.components = numComponents;
 	ret.currentEntity = -1;
 	ret.smallestSetIndex = 0;

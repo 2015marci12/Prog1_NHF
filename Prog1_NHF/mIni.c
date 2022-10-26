@@ -29,7 +29,7 @@ static void strFillNull(char* s)
 
 static void strcpy_term(char* dst, size_t buff, const char* src) 
 {
-    ptrdiff_t advance;
+    size_t advance;
     for (advance = 0; (advance < (buff - 1)) && ('\0' != src[advance]); advance++)
     {
         dst[advance] = src[advance];

@@ -84,7 +84,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	oCol = vCol * texture2D_bilinear(textures[int(vTex)], vtUV);\n"
+			"	oCol = vCol * texture2D_bilinear(textures[uint(vTex)], vtUV);\n"
 			"	if(!(oCol.a > 0.f)) discard;\n"
 			"}\n";
 		shaderSource_t sources[] =
@@ -98,6 +98,8 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		unsigned char whitetexdata[] = { 0xFF, 0xFF, 0xFF, 0xFF };
 		inst->WhiteTex = GLTexture_Create(GLTextureType_2D, GLFormat_RGBA, new_uvec3(1, 1, 1), 1);
 		GLTexture_Upload(inst->WhiteTex, 0, GLFormat_RGBA, new_uvec3(0, 0, 0), inst->WhiteTex->Size, whitetexdata);
+		for (int i = 0; i < MAX_TEXTURES; i++) inst->textures[i] = inst->WhiteTex;
+		inst->texCount = 1;
 
 		inst->quadCount = 0;
 
@@ -180,7 +182,7 @@ void Renderer2D_BeginBatch(Renderer2D* inst)
 	if (inst)
 	{
 		//Reset textures.
-		inst->lastTex = 0;
+		inst->texCount = 1;
 		for (int i = 0; i < MAX_TEXTURES; i++)
 		{
 			inst->textures[i] = inst->WhiteTex;
@@ -225,7 +227,7 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 			GLBuffer_BindTarget(inst->quadIBO, GLBufferTarget_INDEXBUFFER);
 
 			//Bind textures.
-			for (int i = 0; i < MAX_TEXTURES; i++)
+			for (uint32_t i = 0; i < inst->texCount; i++)
 			{
 				GLTexture_BindUnit(inst->textures[i], i);
 			}
@@ -260,17 +262,21 @@ void Renderer2D_NextBatch(Renderer2D* inst)
 int Renderer2D_AddTexture(Renderer2D* inst, GLTexture* tex)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
-	if (!tex) return 0;
-	if (++(inst->lastTex) > MAX_TEXTURES - 1)
+	if (!tex) return 0; //0th texture is always the white one.
+	//Find the texture if it is already submitted.	
+	for (int i = 0; i < (int)inst->texCount; i++)
 	{
-		Renderer2D_NextBatch(inst);
-		return Renderer2D_AddTexture(inst, tex);
+		if (inst->textures[i] == tex) return i;
 	}
-	else
+	//Texture not found. check if we can add it to the array.
+	if (inst->texCount < MAX_TEXTURES) 
 	{
-		inst->textures[inst->lastTex] = tex;
-		return inst->lastTex;
+		inst->textures[inst->texCount] = tex;
+		return inst->texCount++;
 	}
+	//If that fails, flush and then attempt again.
+	Renderer2D_NextBatch(inst);
+	return Renderer2D_AddTexture(inst, tex); //Tail call opt.
 }
 
 void Renderer2D_BeginScene(Renderer2D* inst, mat4 camera)
@@ -384,10 +390,10 @@ void Renderer2D_DrawQuad_t(Renderer2D* inst, mat4 transform, vec2 size, vec4 col
 
 	const vec4 quadVertexPos[] =
 	{
-		new_vec4(-0.5f, -0.5f, 0, 1.f),
-		new_vec4(0.5f, -0.5f, 0, 1.f),
-		new_vec4(0.5f, 0.5f, 0, 1.f),
-		new_vec4(-0.5f, 0.5f, 0, 1.f)
+		new_vec4(-0.5f, -0.5f, 0.f, 1.f),
+		new_vec4(0.5f, -0.5f, 0.f, 1.f),
+		new_vec4(0.5f, 0.5f, 0.f, 1.f),
+		new_vec4(-0.5f, 0.5f, 0.f, 1.f)
 	};
 
 	const vec2 texCoords[] =

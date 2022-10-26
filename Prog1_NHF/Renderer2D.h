@@ -36,7 +36,7 @@ typedef struct Renderer2D
 	
 	//Texturing.
 	GLTexture* WhiteTex;
-	uint32_t lastTex;
+	uint32_t texCount;
 	GLTexture* textures[MAX_TEXTURES];
 
 	//Quad vertex data.

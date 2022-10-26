@@ -1,11 +1,6 @@
 #include "Graphics.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#ifdef _DEBUG
-#	define STBI_MALLOC(S) debugmalloc_malloc_full((S), "malloc", #S, __FILE__, __LINE__, false)
-#	define STBI_REALLOC(P,S) debugmalloc_realloc_full((P), (S), "realloc", #S, __FILE__, __LINE__)
-#	define STBI_FREE(P) debugmalloc_free_full((P), "free", __FILE__, __LINE__)
-#endif
 #include <stb_image.h>
 
 void GLAPIENTRY
@@ -160,8 +155,8 @@ void GLBuffer_BindTargetRange(GLBuffer* ptr, GLBufferTarget target, uint32_t ind
 
 GLShader* GLShader_Create(const shaderSource_t* sources, size_t source_count)
 {
-	uint32_t program;
-	uint32_t shaders[6];
+	uint32_t program = 0;
+	uint32_t shaders[6] = { 0u };
 	ASSERT((source_count < 7) && (source_count > 0), "Invalid number of shaders!");
 	bool noErrors = true;
 
