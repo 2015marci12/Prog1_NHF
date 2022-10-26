@@ -17,6 +17,7 @@ enum ComponentTypes
 	Component_COLLOIDER, //Fires collision events.
 	Component_MOVEMENT, //moves according to the predefined characteristics.
 	Component_LIFETIME, //destroys the entity after some time and calls the callback beforehand.
+	Compnent_PHYSICS, //Physics
 	Component_PLAYER,
 	Component_PLANE,
 };
@@ -93,8 +94,9 @@ void Orphan(Scene_t* scene, entity_t e);
 typedef struct Colloider 
 {
 	Rect body;
-	uint64_t layermask; //A mask that what layers to check for collisions.
-	uint32_t layer : 6; //64 layers.
+	uint64_t maskBits; //A mask that says what categories to check for collisions.
+	uint64_t categoryBits; //A mask that says what categores the body belongs to.
+	int32_t groupIndex; //0 will not check, negative only checks same indices, positive only checks different indices.
 } Colloider;
 
 typedef struct CollisionEvent 
@@ -102,8 +104,6 @@ typedef struct CollisionEvent
 	entity_t a, b; //The two entities that colloided.
 	vec2 normal; //The collision normal.
 	float penetration; //The depth of the collision.
-	uint32_t AWantedToColloideWithB : 1; //Whether b is in a's layer mask.
-	uint32_t BWantedToColloideWithA : 1; //Whether a is in b's layer mask.
 } CollisionEvent;
 
 void RegisterColloider(Scene_t* scene);
@@ -145,5 +145,19 @@ typedef struct LifetimeComponent
 
 void RegisterLifetime(Scene_t* scene);
 void UpdateLifetimes(Scene_t* scene);
+
+/*
+* PhysicsBody.
+*/
+
+typedef struct PhysicsComponent 
+{
+	float restitution;
+	float mass; //0 mass means that the object is static.
+	float inv_mass; //0 inverted mass means that the object is static.
+} PhysicsComponent;
+
+float CalcInvMass(float mass);
+void PhysicsResolveCollision(Scene_t* scene, CollisionEvent* e);
 
 void RegisterStandardComponents(Scene_t* scene);

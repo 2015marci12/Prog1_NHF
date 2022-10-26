@@ -234,7 +234,7 @@ void FireCollisionEvents(Scene_t* scene)
 		{
 			//Avoid checking entites with themselves or duplicate checks.
 			if (View_GetCurrentIndex(&outter) > View_GetCurrentIndex(&inner)
-				&& View_GetCurrent(&outter) == View_GetCurrent(&inner)) //Should be redundant, still here just to be safe.
+				|| View_GetCurrent(&outter) == View_GetCurrent(&inner)) //Should be redundant, still here just to be safe.
 			{
 				continue;
 			}
@@ -242,26 +242,32 @@ void FireCollisionEvents(Scene_t* scene)
 			//Get components.
 			mat4 transform1 = CalcWorldTransform(scene, View_GetCurrent(&outter));
 			mat4 transform2 = CalcWorldTransform(scene, View_GetCurrent(&inner));
-			Colloider* colloider1 = View_GetComponent(&outter, 1);
-			Colloider* colloider2 = View_GetComponent(&inner, 1);
+			Colloider* a = View_GetComponent(&outter, 1);
+			Colloider* b = View_GetComponent(&inner, 1);
 
 			//Prefill predictable event data.
 			CollisionEvent e = {0};
 			e.a = View_GetCurrent(&outter);
 			e.b = View_GetCurrent(&inner);
 
-			//Check collision layers.
-			e.AWantedToColloideWithB = colloider1->layermask & BIT(colloider2->layer - 1);
-			e.BWantedToColloideWithA = colloider2->layermask & BIT(colloider1->layer - 1);
-			//Same layer-layermask logic that is used in the GODOT engine, because that sounded useful.
+			//Same layer-layermask and grouping logic that is used in the Box2D phyisics engine.
+			bool categoryCheck = (a->categoryBits & b->maskBits) != 0
+				&& (a->maskBits & b->categoryBits) != 0; //The result of the layer-layermask check.
 
-			if (e.AWantedToColloideWithB || e.BWantedToColloideWithA) //Check collison if either entity wants to check the other.
+			bool groupIndexEqual = a->groupIndex == b->groupIndex;
+			bool groupIndexNonZero = a->groupIndex != 0 && b->groupIndex != 0;
+			bool colloide = groupIndexNonZero ? //If the group indices are both non-zero, check group logic. otherwise just use the layers.
+					(groupIndexEqual ? //If the groups are equal, then groups decide the result. otherwise just use the layers.
+						(a->groupIndex >= 0) : //Negative then don't colloide, positive then colloide.
+						categoryCheck) 
+				: categoryCheck;
+			if (colloide)
 			{
 				//Calculate the transformed AABBs. TODO may want to recalculate the size according to rotation.
-				vec2 aPos = new_vec2_v4(mat4x4_Mul_v(transform1, new_vec4_v2(colloider1->body.Pos, 0.f, 1.f))),
-					bPos = new_vec2_v4(mat4x4_Mul_v(transform2, new_vec4_v2(colloider2->body.Pos, 0.f, 1.f)));
-				Rect aMov = new_Rect_ps(aPos, colloider1->body.Size),
-					bMov = new_Rect_ps(bPos, colloider2->body.Size);
+				vec2 aPos = new_vec2_v4(mat4x4_Mul_v(transform1, new_vec4_v2(a->body.Pos, 0.f, 1.f))),
+					bPos = new_vec2_v4(mat4x4_Mul_v(transform2, new_vec4_v2(b->body.Pos, 0.f, 1.f)));
+				Rect aMov = new_Rect_ps(aPos, a->body.Size),
+					bMov = new_Rect_ps(bPos, b->body.Size);
 
 				//Fill out event manifold and check collision.			
 				if (Rect_Intersects(aMov, bMov, &e.normal, &e.penetration))
@@ -319,6 +325,57 @@ void UpdateLifetimes(Scene_t* scene)
 		}
 		else View_Next(&v);
 	}
+}
+
+float CalcInvMass(float mass)
+{
+	if (mass == 0.f) return 0.f;
+	else return 1.f / mass;
+}
+
+void PhysicsResolveCollision(Scene_t* scene, CollisionEvent* e)
+{
+	mat4* aTransform = Scene_Get(scene, e->a, Component_TRANSFORM);
+	mat4* bTransform = Scene_Get(scene, e->b, Component_TRANSFORM);
+	PhysicsComponent* aPhys = Scene_Get(scene, e->a, Compnent_PHYSICS);
+	PhysicsComponent* bPhys = Scene_Get(scene, e->b, Compnent_PHYSICS);
+	MovementComponent* aMov = Scene_Get(scene, e->a, Component_MOVEMENT);
+	MovementComponent* bMov = Scene_Get(scene, e->b, Component_MOVEMENT);
+
+	//Only able to resolve collisons between 2 physics objects.
+	if (!(aPhys && bPhys)) return;
+	//Cannot resolve if both objects are static. dynamic objects must have movement components.
+	if (!((aPhys->inv_mass == 0.f) && aMov || (bPhys->inv_mass == 0.f) && bMov)) return;
+
+	vec2 aVel = aMov ? aMov->velocity : new_vec2_v(0.f);
+	vec2 bVel = bMov ? bMov->velocity : new_vec2_v(0.f);
+
+	//Relative velocity.
+	vec2 rv = vec2_Sub(bVel, aVel);
+
+	//If the objects are moving away from each other, there is no need to resolve the collison.
+	float velAlongNormal = vec2_Dot(rv, e->normal);
+	if (velAlongNormal > 0.f) return;
+
+	// Calculate restitution
+	float restitution = min(aPhys->restitution, bPhys->restitution);
+
+	// Calculate impulse scalar
+	float j = -(1.f + restitution) * velAlongNormal;
+	j /= aPhys->inv_mass + bPhys->inv_mass;
+
+	// Apply impulse
+	vec2 impulse = vec2_s_Mul(j, e->normal);
+	if (aMov) aMov->velocity = vec2_Add(vec2_s_Mul(aPhys->inv_mass, impulse), aMov->velocity);
+	if (bMov) bMov->velocity = vec2_Sub(vec2_s_Mul(bPhys->inv_mass, impulse), bMov->velocity);
+
+	//Positional correction.
+	const float factor = 0.2f;
+	const float slop = 0.01f;
+	vec3 correction = vec3_Mul_s(new_vec3_v2(e->normal, 0.f),
+		max(e->penetration - slop, 0.0f) * factor / (aPhys->inv_mass + bPhys->inv_mass));
+	*aTransform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), vec3_Mul_s(correction, aPhys->inv_mass)), *aTransform);
+	*bTransform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), vec3_Mul_s(correction, bPhys->inv_mass)), *bTransform);
 }
 
 void RegisterStandardComponents(Scene_t* scene)
