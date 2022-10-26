@@ -89,6 +89,86 @@ size_t SparseMap_Remove(SparseMap_t* ptr, entity_t entity)
 	return pos;
 }
 
+static int Shifted_0(size_t n)
+{
+	int ret = 0;
+	while (n) 
+	{ 
+		ret++;
+		n >>= 1;
+	};
+	return ret;
+}
+
+int PagedStorage_sizePageIndex(PagedStorage_t* storage, size_t size)
+{
+	size_t offset_Elem = size / storage->FirstPageSize; //Divide by the original size.
+	return Shifted_0(offset_Elem); //Get the number of doublings before the page is reached.
+}
+
+size_t PagedStorage_pageSize(PagedStorage_t* storage, int pageInd)
+{
+	if (pageInd < 0) return 0;
+	return ((1ull << pageInd) * storage->FirstPageSize); //2^pageind * original size.
+}
+
+int PagedStorage_pageIndex_offset(PagedStorage_t* storage, size_t offset, size_t* offsetOut)
+{
+	int msb = PagedStorage_sizePageIndex(storage, offset);
+	if (offsetOut)
+	{
+		*offsetOut = offset - PagedStorage_pageSize(storage, msb - 1); //Calculate the remainder offset.
+		ASSERT(*offsetOut < (PagedStorage_pageSize(storage, msb) - PagedStorage_pageSize(storage, msb - 1)), "\n");
+	}
+	return msb;
+}
+
+PagedStorage_t* PagedStorage_Init(PagedStorage_t* inst, size_t FirstPageSize)
+{
+	if (inst)
+	{
+		memset(inst->dataPtrs, 0, sizeof(inst->dataPtrs)); //Set every page ptr to NULL.
+		inst->FirstPageSize = FirstPageSize;
+		inst->Size = 0ull; 
+	}
+	return inst;
+}
+
+void PagedStorage_Destroy(PagedStorage_t* inst)
+{
+	if (inst)
+	{
+		for (int i = 0; i < PTR_BITS; i++)
+		{
+			if (inst->dataPtrs[i]) free(inst->dataPtrs[i]);
+			inst->dataPtrs[i] = NULL;
+		}
+		inst->Size = 0;
+		inst->FirstPageSize = 0;
+	}
+}
+
+void PagedStorage_Reserve(PagedStorage_t* inst, size_t reserve)
+{
+	int pageCount = PagedStorage_sizePageIndex(inst, reserve) + 1;
+	for (int i = 0; i < pageCount; i++) 
+	{
+		if (!inst->dataPtrs[i])
+		{ 
+			size_t size = PagedStorage_pageSize(inst, i) - PagedStorage_pageSize(inst, i - 1);
+			inst->dataPtrs[i] = malloc(size);
+		};
+	}
+	inst->Size = max(reserve, inst->Size);
+}
+
+void* PagedStorage_Get(PagedStorage_t* inst, size_t offset)
+{
+	size_t inpage_offset = 0;
+	int page = PagedStorage_pageIndex_offset(inst, offset, &inpage_offset);
+	return &inst->dataPtrs[page][inpage_offset];
+}
+
 ComponentStorage_t* ComponentStorage_Init(ComponentStorage_t* ptr, ComponentInfo_t comp)
 {
 	if (ptr)
@@ -96,8 +176,7 @@ ComponentStorage_t* ComponentStorage_Init(ComponentStorage_t* ptr, ComponentInfo
 		SparseMap_Init(&ptr->sparse);
 		ptr->comp = comp;
 		ptr->comp_count = 0;
-		ptr->data_capacity = 0;
-		ptr->components = NULL;
+		PagedStorage_Init(&ptr->components, comp.size * 1024ull);
 	}
 	return ptr;
 }
@@ -107,7 +186,7 @@ void ComponentStorage_Destroy(ComponentStorage_t* ptr)
 	if (ptr)
 	{
 		SparseMap_Destroy(&ptr->sparse);
-		free(ptr->components);
+		PagedStorage_Destroy(&ptr->components);
 	}
 }
 
@@ -133,7 +212,7 @@ void* ComponentStorage_GetByIndex(ComponentStorage_t* ptr, size_t index)
 {
 	ASSERT(ptr, "ComponentStorage_GetByIndex does not permit ptr to be NULL");
 	ASSERT((index < ptr->comp_count), "ComponentStorage_GetByIndex index out of range!");
-	return &((char*)ptr->components)[ptr->comp.size * index];
+	return PagedStorage_Get(&ptr->components, ptr->comp.size * index);
 }
 
 void* ComponentStorage_Get(ComponentStorage_t* ptr, entity_t entity)
@@ -150,7 +229,7 @@ void* ComponentStorage_Emplace(ComponentStorage_t* ptr, entity_t entity)
 	ASSERT(entity != -1, "ComponentStorage_Emplace does not permit entity to be invalid (-1)!");
 	size_t pos = SparseMap_Emplace(&ptr->sparse, entity);
 	size_t cap = ptr->sparse.dense_capacity * ptr->comp.size;
-	if (cap > ptr->data_capacity) ptr->components = realloc(ptr->components, cap);
+	if (cap > ptr->components.Size) PagedStorage_Reserve(&ptr->components, cap);
 	ptr->comp_count++;
 	return ComponentStorage_GetByIndex(ptr, pos);
 }

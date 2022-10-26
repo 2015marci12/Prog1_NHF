@@ -244,33 +244,24 @@ void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 		{
 			pc->shootingTimer = MakeTimer();
 			entity_t bullet = Scene_CreateEntity(scene);
-			mat4* bullettransform = Scene_AddComponent(scene, bullet, Component_TRANSFORM);
-			Sprite* bulletsprite = Scene_AddComponent(scene, bullet, Component_SPRITE);
-			MovementComponent* bmc = Scene_AddComponent(scene, bullet, Component_MOVEMENT);		
-			LifetimeComponent* lt = Scene_AddComponent(scene, bullet, Component_LIFETIME);	
 
-			//Refresh pointers, otherwise we may read garbage data.
-			mat4* transform = View_GetComponent(&view, 0);
-			PlayerComponent* pc = View_GetComponent(&view, 1);
-			MovementComponent* mc = View_GetComponent(&view, 2);
-			PlaneComponent* pm = View_GetComponent(&view, 4);
-			Sprite* sprite = View_GetComponent(&view, 3);
-
-			//Init the components.
 			vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
 			vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 			vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+			mat4* bullettransform = Scene_AddComponent(scene, bullet, Component_TRANSFORM);
 			*bullettransform = mat4_Translate(*transform, new_vec3(0.6f, 0.f, 0.f));
 
+			Sprite* bulletsprite = Scene_AddComponent(scene, bullet, Component_SPRITE);
 			*bulletsprite = Sprite_init();
 			bulletsprite->size = new_vec2(0.3f, 0.3f);
 			bulletsprite->subTex = bulletSubTex;
 			bulletsprite->tintColor = new_vec4_v(1.f);
 
-
+			MovementComponent* bmc = Scene_AddComponent(scene, bullet, Component_MOVEMENT);		
 			bmc->velocity = vec2_Add(mc->velocity, vec2_Mul_s(direction, bullet_velocity));
 			bmc->acceleration = new_vec2_v(0.f);
 
+			LifetimeComponent* lt = Scene_AddComponent(scene, bullet, Component_LIFETIME);	
 			lt->timer = MakeTimer();
 			lt->lifetime = bullet_lifeTime;
 			lt->userdata = NULL;
