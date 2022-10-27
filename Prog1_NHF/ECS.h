@@ -83,7 +83,7 @@ typedef struct PagedStorage_t
 	//The size of the first page. Used to calculate the position of each offset afterwards.
 	size_t FirstPageSize;
 
-#	define PTR_BITS sizeof(void*)
+#	define PTR_BITS (sizeof(void*) * CHAR_BIT)
 	/*
 	* The lookup table for each allocated page.
 	* Since page size grows by factors of 2, a maximum of PTR_BITS buffers are needed to cover the entire memory.
