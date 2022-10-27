@@ -57,16 +57,8 @@ int mIni_Parse(FILE* file, mIni_Handler_t handler, const void* userdata)
     {
         //strip off potential end of line comment.
         char* comment = line;
-        while (*comment && comment < &line[M_INI_LINE])
-        {
-            comment = skipTo(comment, ";#");
-            char* commentprev = comment - 1;
-            //only if the comment is preceeded by a space or it is at the beginning of the line.
-            if ((commentprev < line) || (commentprev >= line && isspace(*commentprev)))
-                strFillNull(comment);
-            else
-                comment++;
-        }   
+        comment = skipTo(comment, ";#");
+        strFillNull(comment); 
 
         //Skip whitespace at the beginning.
         char* linebegin = skip_whitespace(line);
