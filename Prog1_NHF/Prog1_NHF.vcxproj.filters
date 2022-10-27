@@ -57,6 +57,9 @@
     <ClCompile Include="mIni.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DiffConfig.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -113,18 +116,24 @@
     <ClInclude Include="mIni.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DiffConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="BoosterAnim.ini">
+    <None Include="DiffConfig.ini">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="CannonAnim.ini">
+    <None Include="Resources\BoosterAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="MissileAnim.ini">
+    <None Include="Resources\CannonAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="ExplosionAnim.ini">
+    <None Include="Resources\ExplosionAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\MissileAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

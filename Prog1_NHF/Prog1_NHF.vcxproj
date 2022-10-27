@@ -22,6 +22,7 @@
     <ClCompile Include="Animation.c" />
     <ClCompile Include="Components.c" />
     <ClCompile Include="Container.c" />
+    <ClCompile Include="DiffConfig.c" />
     <ClCompile Include="ECS.c" />
     <ClCompile Include="Graphics.c" />
     <ClCompile Include="Input.c" />
@@ -40,6 +41,7 @@
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="debugmalloc.h" />
+    <ClInclude Include="DiffConfig.h" />
     <ClInclude Include="ECS.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />
@@ -55,10 +57,11 @@
     <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="BoosterAnim.ini" />
-    <None Include="CannonAnim.ini" />
-    <None Include="ExplosionAnim.ini" />
-    <None Include="MissileAnim.ini" />
+    <None Include="DiffConfig.ini" />
+    <None Include="Resources\BoosterAnim.ini" />
+    <None Include="Resources\CannonAnim.ini" />
+    <None Include="Resources\ExplosionAnim.ini" />
+    <None Include="Resources\MissileAnim.ini" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

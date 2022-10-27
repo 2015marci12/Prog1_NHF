@@ -8,6 +8,7 @@
 #include "Timer.h"
 #include "ParticleSystem.h"
 #include "Components.h"
+#include "DiffConfig.h"
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
@@ -84,26 +85,7 @@ void ParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* input)
 	else if (IsKeyPressed(snapshot, SDL_SCANCODE_3)) input->selectedWeapon = 2;
 }
 
-const float viewport_scale = 10.f;
-const float peek_scale = 2.f;
-
-const float g = 3.f;
-const float thrust_idle = 13.f;
-const float thrust_booster = 25.f;
-const float lift_coeff = 1.1f;
-const float drag_coeff = 0.1f;
-const float plane_mass = 1.f;
-
-const float booster_fuelconsumption = 0.1f;
-const float booster_particle_time = 0.01f;
-
-const float cannon_shooting_time = 0.08f;
-const float bullet_velocity = 20.f;
-const float bullet_lifeTime = 1.f;
-const float bullet_damage = 1.f;
-
-const float arena_width = 100.f;
-const float arena_height = 20.f;
+DiffConfig constants;
 
 SDL_Window* window;
 
@@ -149,7 +131,7 @@ bool OnWindowEvent(SDL_Event* e, void* userData)
 
 		//Set camera.
 		float aspect = (float)w / (float)h;
-		*projection = mat4_Ortho(-aspect * viewport_scale, aspect * viewport_scale, viewport_scale, -viewport_scale, -1000, 1000);
+		*projection = mat4_Ortho(-aspect * constants.viewport_scale, aspect * constants.viewport_scale, constants.viewport_scale, -constants.viewport_scale, -1000, 1000);
 
 		return true;
 	}
@@ -202,11 +184,11 @@ void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 	if (mc->velocity.x < 0) *transform = mat4_Scale(*transform, new_vec3(1.f, -1.f, 1.f)); //Invert sprite if the velocity is facing the other way.
 
 	//scale thrust.
-	float thrust = thrust_idle;
+	float thrust = constants.thrust_idle;
 	thrust *= input->Thrust;
 	if (input->booster)
 	{
-		thrust = thrust_booster;
+		thrust = constants.thrust_booster;
 
 		//Booster animation.
 		Timer_t timer = { 0 };
@@ -234,7 +216,7 @@ void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 		p.velocity = vec2_Add(vec2_Mul_s(mc->velocity, -0.5f), vec2_s_Mul(30.f, new_vec2(((float)rand() / (float)(RAND_MAX)) - 0.5f, ((float)rand() / (float)(RAND_MAX)) - 0.5f)));
 		p.lifespan = 0.2f + ((float)rand() / (float)(RAND_MAX)) * 0.2f;
 
-		if (GetElapsedSeconds(pc->boosterParticleTimer) > booster_particle_time)
+		if (GetElapsedSeconds(pc->boosterParticleTimer) > constants.booster_particle_time)
 		{
 			pc->boosterParticleTimer = MakeTimer();
 			Particles_Emit(particles, p);
@@ -256,7 +238,7 @@ void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 		sprite->overlays[1] = Animation_GetAt(&cannonAnim, GetElapsedSeconds(timer), NULL);
 
 		//Spawn bullet
-		if (GetElapsedSeconds(pc->shootingTimer) > cannon_shooting_time)
+		if (GetElapsedSeconds(pc->shootingTimer) > constants.cannon_shooting_time)
 		{
 			pc->shootingTimer = MakeTimer();
 			entity_t bullet = Scene_CreateEntity(scene);
@@ -274,12 +256,12 @@ void UpdatePlayer(Scene_t* scene, InputState* input, float dt)
 			bulletsprite->tintColor = new_vec4_v(1.f);
 
 			MovementComponent* bmc = Scene_AddComponent(scene, bullet, Component_MOVEMENT);		
-			bmc->velocity = vec2_Add(mc->velocity, vec2_Mul_s(direction, bullet_velocity));
+			bmc->velocity = vec2_Add(mc->velocity, vec2_Mul_s(direction, constants.bullet_velocity));
 			bmc->acceleration = new_vec2_v(0.f);
 
 			LifetimeComponent* lt = Scene_AddComponent(scene, bullet, Component_LIFETIME);	
 			lt->timer = MakeTimer();
-			lt->lifetime = bullet_lifeTime;
+			lt->lifetime = constants.bullet_lifeTime;
 			lt->userdata = NULL;
 			lt->callback = NULL; //TODO go poof when done.
 			lt->callback = SpawnExplosion;
@@ -309,7 +291,7 @@ void UpdateCamera(Scene_t* scene, InputState* input)
 
 	//Set camera position.
 	vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*playertransform, new_vec4(0.f, 0.f, 0.f, 1.f))); //Get the position of the player.
-	Pos = vec3_Add(Pos, new_vec3_v2(vec2_Mul_s(input->LookDir, input->Thrust * peek_scale), 0.f)); //Shift it towards the cursor.
+	Pos = vec3_Add(Pos, new_vec3_v2(vec2_Mul_s(input->LookDir, input->Thrust * constants.peek_scale), 0.f)); //Shift it towards the cursor.
 	*transform = mat4_Translate(mat4x4_Identity(), Pos); //Set transfrom.
 }
 
@@ -338,7 +320,7 @@ void MovePlanes(Scene_t* scene, float dt)
 
 		vec2 aeroforce = vec2_Mul_s(velocitynormal, -1.f * (0.5f + fabsf(aoa)) * plane->dragcoeff * (vel * vel)); //drag.
 		vec2 thrustforce = vec2_Mul_s(direction, plane->thrust); //thrust.
-		vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), g * plane->mass); //gravity.
+		vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), constants.g * plane->mass); //gravity.
 
 		//Lift.
 		vec2 lift = vec2_Rot(new_vec2(0.f, vel * aoa * plane->liftcoeff), velAngle);
@@ -397,22 +379,23 @@ int main(int argc, char* argv[])
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) exit(-1);
 
 	//GLEnableDebugOutput();
+	LoadDiff(&constants, "DiffConfig.ini", "standard");
 
-	tex = LoadTex2D("jet.png");
+	tex = LoadTex2D("Resources\\jet.png");
 	atlas = TextureAtlas_create(tex, new_uvec2(64, 32));
 	planeTex = TextureAtlas_SubTexture(&atlas, new_uvec2(0, 3), new_uvec2(1, 1));
 
-	weaponsTex = LoadTex2D("weapons.png");
+	weaponsTex = LoadTex2D("Resources\\weapons.png");
 	weaponsAtlas = TextureAtlas_create(weaponsTex, new_uvec2(16, 16));
 	bulletSubTex = TextureAtlas_SubTexture(&weaponsAtlas, new_uvec2(0, 1), new_uvec2(1, 1));
 
-	explosionTex = LoadTex2D("Explosion.png");
+	explosionTex = LoadTex2D("Resources\\Explosion.png");
 	explosionAtlas = TextureAtlas_create(explosionTex, new_uvec2(96, 96));
 
-	Animation_FromIni("BoosterAnim.ini", &boosterAnim, &atlas);
-	Animation_FromIni("CannonAnim.ini", &cannonAnim, &atlas);
-	Animation_FromIni("MissileAnim.ini", &missileAnim, &weaponsAtlas);
-	Animation_FromIni("ExplosionAnim.ini", &explosionAnim, &explosionAtlas);
+	Animation_FromIni("Resources\\BoosterAnim.ini", &boosterAnim, &atlas);
+	Animation_FromIni("Resources\\CannonAnim.ini", &cannonAnim, &atlas);
+	Animation_FromIni("Resources\\MissileAnim.ini", &missileAnim, &weaponsAtlas);
+	Animation_FromIni("Resources\\ExplosionAnim.ini", &explosionAnim, &explosionAtlas);
 
 	//Add components.
 	Scene_t* scene = Scene_New();
@@ -444,7 +427,7 @@ int main(int argc, char* argv[])
 	s->tintColor = new_vec4_v(1.f);
 	s->size = new_vec2(2.f, 1.0f);
 	for (int i = 0; i < 5; i++) s->overlays[i] = SubTexture_empty();
-	PlaneComponent temp = { lift_coeff, drag_coeff, thrust_booster, plane_mass };
+	PlaneComponent temp = { constants.lift_coeff, constants.drag_coeff, constants.thrust_booster, constants.plane_mass };
 	*pm = temp;
 	mc->acceleration = new_vec2_v(0.f);
 	mc->velocity = new_vec2_v(0.f);
@@ -453,7 +436,7 @@ int main(int argc, char* argv[])
 	mat4* cam_tr = Scene_AddComponent(scene, came, Component_TRANSFORM);
 	Camera* cam = Scene_AddComponent(scene, came, Component_CAMERA);
 	*cam_tr = mat4x4_Identity();	
-	*cam = mat4_Ortho(-aspect * viewport_scale, aspect * viewport_scale, viewport_scale, -viewport_scale, -1000, 1000);
+	*cam = mat4_Ortho(-aspect * constants.viewport_scale, aspect * constants.viewport_scale, constants.viewport_scale, -constants.viewport_scale, -1000, 1000);
 
 	Timer_t timer = MakeTimer();
 
@@ -502,22 +485,22 @@ int main(int argc, char* argv[])
 		//Render test background.
 		Renderer2D_BeginScene(&renderer, camera);
 		vec2 camPos = new_vec2_v4(mat4x4_Mul_v(*cam_tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		for (float x = camPos.x - aspect * viewport_scale; x < camPos.x + aspect * viewport_scale; x++)
+		for (float x = camPos.x - aspect * constants.viewport_scale; x < camPos.x + aspect * constants.viewport_scale; x++)
 		{
 			float x_ = floorf(x / 5.f) * 5.f;
 			Renderer2D_DrawLine(&renderer,
-				new_vec3(x_, camPos.y + viewport_scale, -1.f),
-				new_vec3(x_, camPos.y - viewport_scale, -1.f),
+				new_vec3(x_, camPos.y + constants.viewport_scale, -1.f),
+				new_vec3(x_, camPos.y - constants.viewport_scale, -1.f),
 				new_vec4_v(1.f)
 			);
 		}
 
-		for (float y = camPos.y - viewport_scale; y < camPos.y + viewport_scale; y++)
+		for (float y = camPos.y - constants.viewport_scale; y < camPos.y + constants.viewport_scale; y++)
 		{
 			float y_ = floorf(y / 5.f) * 5.f;
 			Renderer2D_DrawLine(&renderer,
-				new_vec3(camPos.x + aspect * viewport_scale, y_, -1.f),
-				new_vec3(camPos.x - aspect * viewport_scale, y_, -1.f),
+				new_vec3(camPos.x + aspect * constants.viewport_scale, y_, -1.f),
+				new_vec3(camPos.x - aspect * constants.viewport_scale, y_, -1.f),
 				new_vec4_v(1.f)
 			);
 		}

@@ -59,7 +59,7 @@ int mIni_Parse(FILE* file, mIni_Handler_t handler, const void* userdata)
         char* comment = line;
         while (*comment && comment < &line[M_INI_LINE])
         {
-            comment = skipTo(line, ";#");
+            comment = skipTo(comment, ";#");
             char* commentprev = comment - 1;
             //only if the comment is preceeded by a space or it is at the beginning of the line.
             if ((commentprev < line) || (commentprev >= line && isspace(*commentprev)))
