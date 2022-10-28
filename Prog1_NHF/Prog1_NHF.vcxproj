@@ -24,6 +24,8 @@
     <ClCompile Include="Container.c" />
     <ClCompile Include="DiffConfig.c" />
     <ClCompile Include="ECS.c" />
+    <ClCompile Include="GameComponents.c" />
+    <ClCompile Include="GameScene.c" />
     <ClCompile Include="Graphics.c" />
     <ClCompile Include="Input.c" />
     <ClCompile Include="LinearAllocator.c" />
@@ -43,6 +45,8 @@
     <ClInclude Include="debugmalloc.h" />
     <ClInclude Include="DiffConfig.h" />
     <ClInclude Include="ECS.h" />
+    <ClInclude Include="GameComponents.h" />
+    <ClInclude Include="GameScene.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />
     <ClInclude Include="Input.h" />

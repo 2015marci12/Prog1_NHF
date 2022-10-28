@@ -11,5 +11,7 @@ typedef struct Timer_t
 
 
 Timer_t MakeTimer();
-uint64_t GetElapsedMs(Timer_t timer);
+Timer_t MakeTimer_Offset(int64_t ticksFromNow);
+Timer_t MakeTimer_OffsetSec(float secondsFromNow);
+int64_t GetElapsedMs(Timer_t timer);
 float GetElapsedSeconds(Timer_t timer);

@@ -6,10 +6,22 @@ Timer_t MakeTimer()
 	return ret;
 }
 
-uint64_t GetElapsedMs(Timer_t timer)
+Timer_t MakeTimer_Offset(int64_t ticksFromNow)
+{
+	Timer_t ret = { (uint64_t)((int64_t)SDL_GetTicks64() + ticksFromNow) };
+	return ret;
+}
+
+Timer_t MakeTimer_OffsetSec(float secondsFromNow)
+{
+	Timer_t ret = { (uint64_t)((int64_t)SDL_GetTicks64() + (int64_t)(secondsFromNow * 1000ll)) };
+	return ret;
+}
+
+int64_t GetElapsedMs(Timer_t timer)
 {
 	uint64_t now = SDL_GetTicks64();
-	return now - timer.startTime;
+	return (int64_t)now - (int64_t)timer.startTime;
 }
 
 float GetElapsedSeconds(Timer_t timer)

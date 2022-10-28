@@ -23,10 +23,8 @@ void RegisterSprite(Scene_t* scene)
 	Scene_AddComponentType(scene, cinf);
 }
 
-void RenderSprites(Scene_t* scene, Renderer2D* renderer, mat4 cameraMVP)
+void RenderSprites(Scene_t* scene, Renderer2D* renderer)
 {
-	Renderer2D_BeginScene(renderer, cameraMVP);
-
 	//Render each renderable.
 	for (View_t sprites = View_Create(scene, 2, Component_TRANSFORM, Component_SPRITE);
 		!View_End(&sprites); View_Next(&sprites))
@@ -44,8 +42,6 @@ void RenderSprites(Scene_t* scene, Renderer2D* renderer, mat4 cameraMVP)
 			}
 		}
 	}
-
-	Renderer2D_EndScene(renderer);
 }
 
 Sprite Sprite_init()

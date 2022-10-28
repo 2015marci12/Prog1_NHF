@@ -45,6 +45,15 @@ SubTexture Animation_GetAt(Animation* animation, float time, float* overtime)
 	return SubTexture_empty();
 }
 
+float Animaton_GetDuration(Animation* anim)
+{
+	if (anim)
+	{
+		return anim->frameCount * anim->frameTime;
+	}
+	return 0.f;
+}
+
 typedef struct AnimIniLoadTemp 
 {
 	float frameTime;
