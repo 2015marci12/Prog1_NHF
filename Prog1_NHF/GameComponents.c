@@ -96,15 +96,14 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 		vec2 ppos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(-0.8f, 0.f, 0.f, 1.f)));
 
 		Particle p = MakeParticle(ppos, 0.f, col, lifetime);
-		p.Velocity = vec2_Add(vec2_Mul_s(mc->velocity, -0.5f), vec2_s_Mul(10.f, new_vec2(((float)rand() / (float)(RAND_MAX)) - 0.5f, ((float)rand() / (float)(RAND_MAX)) - 0.5f)));
+		p.Velocity = vec2_Add(vec2_Mul_s(mc->velocity, -0.7f), vec2_s_Mul(vec2_Len(mc->velocity) * 0.3f, new_vec2(((float)rand() / (float)(RAND_MAX)) - 0.5f, ((float)rand() / (float)(RAND_MAX)) - 0.5f)));
+		p.EndColor.a = 0.f;
 
 		if (GetElapsedSeconds(pc->boosterParticleTimer) > game->constants.booster_particle_time)
 		{
 			pc->boosterParticleTimer = MakeTimer();
 			Particles_Emit(game->Particles[PARTICLE_BOOSTER], p);
 		}
-
-		//TODO particle emitter and proper particle systems per particle type.
 	}
 	else
 	{

@@ -24,7 +24,7 @@ void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* inpu
 	else input->selectedWeapon = -1;
 }
 
-Game* InitGame(Game* game, SDL_Window* window, const char* PlayerName, const char* DiffName)
+Game* InitGame(Game* game, SDL_Window* window)
 {
 	if (game)
 	{
@@ -37,8 +37,7 @@ Game* InitGame(Game* game, SDL_Window* window, const char* PlayerName, const cha
 		ComponentInfo_t planeInfo = COMPONENT_DEF(Component_PLANE, PlaneComponent);
 		Scene_AddComponentType(game->scene, planeInfo);
 
-		LoadDiff(&game->constants, "DiffConfig.ini", DiffName);
-		game->PlayerName = PlayerName;
+		LoadConfig(&game->constants, "Config.ini");
 		game->window = window;
 
 		//Particle systems.

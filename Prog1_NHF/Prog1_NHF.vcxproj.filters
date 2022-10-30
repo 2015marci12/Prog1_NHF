@@ -133,7 +133,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="DiffConfig.ini">
+    <None Include="Config.ini">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="Resources\BoosterAnim.ini">

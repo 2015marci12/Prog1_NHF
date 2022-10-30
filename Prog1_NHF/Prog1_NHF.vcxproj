@@ -61,7 +61,7 @@
     <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="DiffConfig.ini" />
+    <None Include="Config.ini" />
     <None Include="Resources\BoosterAnim.ini" />
     <None Include="Resources\CannonAnim.ini" />
     <None Include="Resources\ExplosionAnim.ini" />

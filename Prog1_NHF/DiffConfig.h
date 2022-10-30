@@ -6,6 +6,7 @@
 //All of the different options to fine-tune gameplay.
 typedef struct DiffConfig
 {
+
 	float viewport_scale;
 	float peek_scale;
 
@@ -16,7 +17,9 @@ typedef struct DiffConfig
 	float drag_coeff;
 	float plane_mass;
 
+	float booster_fuel;
 	float booster_fuelconsumption;
+	float booster_recharge_rate;
 	float booster_particle_time;
 
 	float cannon_shooting_time;
@@ -34,31 +37,18 @@ typedef struct DiffConfig
 
 	float bullet_damage_enemy;
 	float missile_damage_enemy;
-	float enemy_structure_health;
-	float enemy_vehicle_health;
-	float enemy_aircraft_health;
-	float enemy_upgrade_health_factor;
 
-	float enemy_structure_spawnrate_const;
-	float enemy_structure_spawnrate_lin;
-	float enemy_structure_spawnrate_max;
+	float structure_health;
+	float vehicle_health;
+	float aircraft_health;
+	float upgrade_health_factor;
 
-	float enemy_vehicle_spawnrate_const;
-	float enemy_vehicle_spawnrate_lin;
-	float enemy_vehicle_spawnrate_max;
-
-	float enemy_aircraft_spawnrate_const;
-	float enemy_aircraft_spawnrate_lin;
-	float enemy_aircraft_spawnrate_max;
-
-	float diff_structure_score;
-	float diff_vehicle_score;
-	float diff_aircraft_score;
-	float diff_score_time_lin;
-	float diff_combo_scaling;
-	float diff_combo_max;
-	float diff_combo_timeout;
+	float structure_score;
+	float vehicle_score;
+	float aircraft_score;
+	float wave_scaling;
+	float balloon_chance;
 } DiffConfig;
 
-//Load a difficulty from a config file.
-bool LoadDiff(DiffConfig* config, const char* filepath, const char* diffname);
+//Load the game configuration from a file.
+bool LoadConfig(DiffConfig* config, const char* filepath);

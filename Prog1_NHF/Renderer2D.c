@@ -190,7 +190,7 @@ void Renderer2D_BeginBatch(Renderer2D* inst)
 
 		//Reset vertex data.
 		inst->quadCount = 0;
-		inst->quadHead = GLBuffer_BeginWriteRange(inst->quadVBO, 0, inst->quadVBO->Size);;
+		inst->quadHead = GLBuffer_BeginWriteRange(inst->quadVBO, 0, inst->quadVBO->Size);
 
 		//Reset lines.
 		inst->lineCount = 0;

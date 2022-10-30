@@ -77,7 +77,6 @@ typedef struct Game
 {
 	DiffConfig constants;
 	uint64_t score;
-	const char* PlayerName;
 	Scene_t* scene;
 	SDL_Window* window;
 
@@ -86,7 +85,7 @@ typedef struct Game
 	ParticleSystem* Particles[PARTICLESYS_COUNT];
 } Game;
 
-Game* InitGame(Game* game, SDL_Window* window, const char* PlayerName, const char* DiffName);
+Game* InitGame(Game* game, SDL_Window* window);
 void CleanupGame(Game* game);
 
 void DispatchGameEvents(Game* game, EventDispatcher_t* dispatcher);

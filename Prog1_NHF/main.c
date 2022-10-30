@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 	//GLEnableDebugOutput();
 
 	//Load game scene.
-	InitGame(&game, window, "Test", "standard");
+	InitGame(&game, window);
 
 	Renderer2D renderer;
 	Renderer2D_Init(&renderer);
@@ -95,7 +95,6 @@ int main(int argc, char* argv[])
 		timer = MakeTimer();
 
 		UpdateGame(&game, timediff);
-
 		RenderGame(&game, &renderer);
 
 		SDL_GL_SwapWindow(window);
