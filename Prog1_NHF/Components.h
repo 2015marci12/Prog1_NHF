@@ -17,7 +17,7 @@ enum ComponentTypes
 	Component_COLLOIDER, //Fires collision events.
 	Component_MOVEMENT, //moves according to the predefined characteristics.
 	Component_LIFETIME, //destroys the entity after some time and calls the callback beforehand.
-	Compnent_PHYSICS, //Physics
+	Component_PHYSICS, //Physics
 	Component_PLAYER,
 	Component_PLANE,
 };
@@ -43,7 +43,7 @@ typedef struct Sprite
 } Sprite;
 
 void RegisterSprite(Scene_t* scene);
-void RenderSprites(Scene_t* scene, Renderer2D* renderer, mat4 cameraMVP);
+void RenderSprites(Scene_t* scene, Renderer2D* renderer);
 Sprite Sprite_init();
 
 
@@ -157,6 +157,7 @@ typedef struct PhysicsComponent
 	float inv_mass; //0 inverted mass means that the object is static.
 } PhysicsComponent;
 
+void RegisterPhysics(Scene_t* scene);
 float CalcInvMass(float mass);
 void PhysicsResolveCollision(Scene_t* scene, CollisionEvent* e);
 

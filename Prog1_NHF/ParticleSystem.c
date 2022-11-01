@@ -60,6 +60,7 @@ void Particles_Draw(ParticleSystem* inst, Renderer2D* renderer)
 		{
 			Particle* p = &inst->particles[i];
 			float time = GetElapsedSeconds(p->SpawnTime);
+			if (time > p->LifeTime) return;
 
 			SubTexture tex = SubTexture_empty();
 			if (inst->data.animation) 

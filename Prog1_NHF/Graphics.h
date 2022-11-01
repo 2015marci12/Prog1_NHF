@@ -40,6 +40,8 @@ typedef struct GLBuffer
 	{
 		const uint32_t NativeHandle;
 		void* Data_ptr;
+		ptrdiff_t write_range_offset;
+		size_t write_range_length;
 	} _Priv;
 } GLBuffer;
 

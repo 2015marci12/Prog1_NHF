@@ -48,6 +48,7 @@ Sprite Sprite_init()
 {
 	Sprite ret;
 	memset(&ret, 0, sizeof(Sprite));
+	ret.tintColor = new_vec4_v(1.f);
 	return ret;
 }
 
@@ -323,6 +324,12 @@ void UpdateLifetimes(Scene_t* scene)
 	}
 }
 
+void RegisterPhysics(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_PHYSICS, PhysicsComponent);
+	Scene_AddComponentType(scene, cinf);
+}
+
 float CalcInvMass(float mass)
 {
 	if (mass == 0.f) return 0.f;
@@ -333,8 +340,8 @@ void PhysicsResolveCollision(Scene_t* scene, CollisionEvent* e)
 {
 	mat4* aTransform = Scene_Get(scene, e->a, Component_TRANSFORM);
 	mat4* bTransform = Scene_Get(scene, e->b, Component_TRANSFORM);
-	PhysicsComponent* aPhys = Scene_Get(scene, e->a, Compnent_PHYSICS);
-	PhysicsComponent* bPhys = Scene_Get(scene, e->b, Compnent_PHYSICS);
+	PhysicsComponent* aPhys = Scene_Get(scene, e->a, Component_PHYSICS);
+	PhysicsComponent* bPhys = Scene_Get(scene, e->b, Component_PHYSICS);
 	MovementComponent* aMov = Scene_Get(scene, e->a, Component_MOVEMENT);
 	MovementComponent* bMov = Scene_Get(scene, e->b, Component_MOVEMENT);
 
@@ -383,4 +390,5 @@ void RegisterStandardComponents(Scene_t* scene)
 	RegisterColloider(scene);
 	RegisterMovement(scene);
 	RegisterLifetime(scene);
+	RegisterPhysics(scene);
 }

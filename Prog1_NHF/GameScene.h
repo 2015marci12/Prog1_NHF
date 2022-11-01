@@ -20,6 +20,7 @@ typedef enum TextureAssets
 	EXPLOSION_TEX,
 	BG1_TEX,
 	BG2_TEX,
+	GROUND_TEX,
 
 	TEX_COUNT,
 } TextureAssets;
@@ -35,8 +36,8 @@ typedef enum AnimationAssets
 
 typedef enum ParticleSystems
 {
-	PARTICLE_BOOSTER,
 	PARTICLE_EXPLOSION,
+	PARTICLE_BOOSTER,
 	PARTICLESYS_COUNT,
 } ParticleSystems;
 

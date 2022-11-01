@@ -24,6 +24,21 @@ void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* inpu
 	else input->selectedWeapon = -1;
 }
 
+void SetupWalls(Game* game) 
+{
+	//Floor
+	entity_t floor = Scene_CreateEntity(game->scene);
+	mat4* transform = Scene_AddComponent(game->scene, floor, Component_TRANSFORM);
+	Sprite* sprite = Scene_AddComponent(game->scene, floor, Component_SPRITE);
+
+	float scale = 3.f;
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.f, 0.f));
+	*sprite = Sprite_init();
+	sprite->size = new_vec2(scale, scale * 2.f);
+	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[GROUND_TEX], new_uvec2(1, 1), new_uvec2(1, 2));
+	//sprite->subTex.texRect.w = game->constants.arena_width / scale;
+}
+
 Game* InitGame(Game* game, SDL_Window* window)
 {
 	if (game)
@@ -57,6 +72,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[PLAYER_TEX] = TextureAtlas_create(LoadTex2D("Resources\\jet.png"), new_uvec2(64, 32));
 		game->Textures[WEAPON_TEX] = TextureAtlas_create(LoadTex2D("Resources\\weapons.png"), new_uvec2(16, 16));
 		game->Textures[EXPLOSION_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Explosion.png"), new_uvec2(96, 96));
+		game->Textures[GROUND_TEX] = TextureAtlas_create(LoadTex2D("Resources\\GroundTiling.png"), new_uvec2(32, 32));
 
 		Animation_FromIni("Resources\\BoosterAnim.ini", &game->Animations[BOOSTER_ANIM], &game->Textures[PLAYER_TEX]);
 		Animation_FromIni("Resources\\CannonAnim.ini", &game->Animations[CANNON_ANIM], &game->Textures[PLAYER_TEX]);
@@ -72,12 +88,16 @@ Game* InitGame(Game* game, SDL_Window* window)
 		PlayerComponent* pc = Scene_AddComponent(game->scene, e, Component_PLAYER);
 		PlaneComponent* pm = Scene_AddComponent(game->scene, e, Component_PLANE);
 		MovementComponent* mc = Scene_AddComponent(game->scene, e, Component_MOVEMENT);
+		Colloider* pcoll = Scene_AddComponent(game->scene, e, Component_COLLOIDER);
+		PhysicsComponent* pphys = Scene_AddComponent(game->scene, e, Component_PHYSICS);
 
 		*tr = mat4x4_Identity();
+
 		s->subTex = TextureAtlas_SubTexture(&game->Textures[PLAYER_TEX], new_uvec2(0, 3), new_uvec2(1, 1));;
 		s->tintColor = new_vec4_v(1.f);
 		s->size = new_vec2(2.f, 1.0f);
 		for (int i = 0; i < 5; i++) s->overlays[i] = SubTexture_empty();
+
 		PlaneComponent temp = { 
 			game->constants.lift_coeff,
 			game->constants.drag_coeff,
@@ -85,11 +105,21 @@ Game* InitGame(Game* game, SDL_Window* window)
 			game->constants.plane_mass
 		};
 		*pm = temp;
+
 		mc->acceleration = new_vec2_v(0.f);
 		mc->velocity = new_vec2_v(0.f);
+
 		pc->shootingTimer = MakeTimer();
 		pc->boosterParticleTimer = MakeTimer();
-		
+
+		pcoll->body = new_Rect(-0.5f, -0.5f, 1.f, 1.f);
+		pcoll->categoryBits = Layer_Player;
+		pcoll->maskBits = COLLISIONMASK_PLAYER;
+		pcoll->groupIndex = FRIENDLY;	
+
+		pphys->inv_mass = 1.f / game->constants.plane_mass;
+		pphys->mass = game->constants.plane_mass;
+		pphys->restitution = 0.4f;
 
 		//Camera
 		int w, h;
@@ -107,6 +137,9 @@ Game* InitGame(Game* game, SDL_Window* window)
 			game->constants.viewport_scale,
 			-game->constants.viewport_scale,
 			-1000, 1000);
+
+		//Walls
+		SetupWalls(game);
 	}
 	return game;
 }
@@ -171,7 +204,7 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	//Render particles.
 	for (int i = 0; i < PARTICLESYS_COUNT; i++) 
 	{
-		Particles_Draw(game->Particles[i], renderer);
+		//Particles_Draw(game->Particles[i], renderer);
 	}
 
 	//Render test background.

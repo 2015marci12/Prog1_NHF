@@ -9,7 +9,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		*/
 
 		//Create buffers.
-		inst->quadVBO = GLBuffer_Create(MAX_QUADS * 4 * sizeof(QuadVertex), GLBufferFlags_NONE, NULL);
+		inst->quadVBO = GLBuffer_Create(MAX_QUADS * 4 * sizeof(QuadVertex), GLBufferFlags_STREAM, NULL);
 		inst->quadIBO = GLBuffer_Create(MAX_QUADS * 6 * sizeof(uint32_t), GLBufferFlags_NONE, NULL);
 
 		//Fill index buffer with the predictable indices.
@@ -98,7 +98,11 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		unsigned char whitetexdata[] = { 0xFF, 0xFF, 0xFF, 0xFF };
 		inst->WhiteTex = GLTexture_Create(GLTextureType_2D, GLFormat_RGBA, new_uvec3(1, 1, 1), 1);
 		GLTexture_Upload(inst->WhiteTex, 0, GLFormat_RGBA, new_uvec3(0, 0, 0), inst->WhiteTex->Size, whitetexdata);
-		for (int i = 0; i < MAX_TEXTURES; i++) inst->textures[i] = inst->WhiteTex;
+		for (int i = 0; i < MAX_TEXTURES; i++)
+		{
+			inst->textures[i] = inst->WhiteTex;
+			GLTexture_BindUnit(inst->WhiteTex, i);
+		}
 		inst->texCount = 1;
 
 		inst->quadCount = 0;
@@ -107,7 +111,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		* Lines.
 		*/
 
-		inst->lineVBO = GLBuffer_Create(MAX_LINES * 2 * sizeof(LineVertex), GLBufferFlags_NONE, NULL);
+		inst->lineVBO = GLBuffer_Create(MAX_LINES * 2 * sizeof(LineVertex), GLBufferFlags_STREAM, NULL);
 		inst->lineHead = NULL;
 
 		vertexAttribute_t lineAttribs[] =
@@ -217,6 +221,8 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 
 		//Line width.
 		glLineWidth(inst->lineWidth);
+
+		//glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
 		//Quads.
 		if (inst->quadCount)

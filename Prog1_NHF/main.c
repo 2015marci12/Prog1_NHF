@@ -57,11 +57,22 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
+	// Request an OpenGL 4.5 context (should be core)
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+	// Also request a depth buffer
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
 	//Init gl
 	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) exit(-1);
 
-	//GLEnableDebugOutput();
+	// Use v-sync
+	SDL_GL_SetSwapInterval(1);
+
+	GLEnableDebugOutput();
 
 	//Load game scene.
 	InitGame(&game, window);
@@ -96,6 +107,8 @@ int main(int argc, char* argv[])
 
 		UpdateGame(&game, timediff);
 		RenderGame(&game, &renderer);
+
+		//Renderer2D_NextFrame(&renderer);
 
 		SDL_GL_SwapWindow(window);
 

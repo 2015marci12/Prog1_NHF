@@ -55,6 +55,7 @@ void GLEnableDebugOutput()
 {
 	glDebugMessageCallback((GLDEBUGPROC)MessageCallback, 0);
 	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 }
 
 GLBuffer* GLBuffer_Create(size_t size, GLBufferFlags flags, const void* Init_Data)
@@ -70,12 +71,12 @@ GLBuffer* GLBuffer_Create(size_t size, GLBufferFlags flags, const void* Init_Dat
 	{
 		//Create storage and init data.
 		glNamedBufferStorage(buffer, size, Init_Data,
-			GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT
+			GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT
 		);
 
 		//Map buffer.
 		dataptr = glMapNamedBufferRange(buffer, 0, size,
-			GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT
+			GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT
 		);
 
 	} else
@@ -113,7 +114,7 @@ void GLBuffer_Upload(GLBuffer* ptr, ptrdiff_t offset, size_t size, const void* d
 	if (ptr->flags & GLBufferFlags_STREAM) memcpy((char*)ptr->_Priv.Data_ptr + offset, data, size);
 	else 
 	{
-		void* mem_ptr = glMapNamedBufferRange(ptr->_Priv.NativeHandle, offset, size, GL_MAP_WRITE_BIT);
+		void* mem_ptr = glMapNamedBufferRange(ptr->_Priv.NativeHandle, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
 		memcpy(mem_ptr, data, size);
 		glUnmapNamedBuffer(ptr->_Priv.NativeHandle);
 	}
@@ -123,13 +124,22 @@ void* GLBuffer_BeginWriteRange(GLBuffer* ptr, ptrdiff_t offset, size_t size)
 {
 	if (!ptr) return NULL;
 
-	if (ptr->flags & GLBufferFlags_STREAM) return (char*)ptr->_Priv.Data_ptr + offset;
-	else return glMapNamedBufferRange(ptr->_Priv.NativeHandle, offset, size, GL_MAP_WRITE_BIT);
+	if (ptr->flags & GLBufferFlags_STREAM)
+	{
+		ptr->_Priv.write_range_length = size;
+		ptr->_Priv.write_range_offset = offset;
+		return (char*)ptr->_Priv.Data_ptr + offset;
+	}
+	else return glMapNamedBufferRange(ptr->_Priv.NativeHandle, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
 }
 void GLBuffer_EndWriteRange(GLBuffer* ptr) 
 {
 	if (!ptr) return;
-	if (ptr->flags & GLBufferFlags_STREAM) return;
+	if (ptr->flags & GLBufferFlags_STREAM)
+	{
+		glFlushMappedNamedBufferRange(ptr->_Priv.NativeHandle, ptr->_Priv.write_range_offset, ptr->_Priv.write_range_length);
+		return;
+	}
 	glUnmapNamedBuffer(ptr->_Priv.NativeHandle);
 }
 
