@@ -494,21 +494,42 @@ static bool Rect_Contains(Rect r, vec2 p)
 
 static bool Rect_Intersects(Rect a, Rect b, vec2* n, float* p) 
 {
-    vec2 diff = vec2_Sub(vec2_Add(a.Pos, vec2_Div_s(a.Size, 2.f)),
-        vec2_Add(b.Pos, vec2_Div_s(b.Size, 2.f)));
+    vec2 diff = vec2_Sub(vec2_Add(b.Pos, vec2_Div_s(b.Size, 2.f)), vec2_Add(a.Pos, vec2_Div_s(a.Size, 2.f)));
     vec2 overlap = vec2_Sub(vec2_Mul_s(vec2_Add(a.Size, b.Size), 0.5f), vec2_Abs(diff));
 
     //The penetration depth. negative values represent the distance between non-intersecting rectangles.
-    if (p) *p = vec2_Max(overlap);
-    //The collision normal. Along the axis of most penetration.
+    if (p) *p = vec2_Min(overlap);
+    //The collision normal. Along the axis of least penetration.
     if (n) 
     {
-        bool normalalongx = overlap.x > overlap.y;
+        bool normalalongx = overlap.x < overlap.y;
         (*n).x = ((float)!!normalalongx) * (diff.x / fabsf(diff.x));
         (*n).y = ((float)!!(!normalalongx)) * (diff.y / fabsf(diff.y));
     }
 
-    return (overlap.x > 0 || overlap.y > 0); //Whether the 2 intersect.
+    return (overlap.x > 0 && overlap.y > 0); //Whether the 2 intersect.
+}
+
+static Rect Rect_Transformed(mat4 transform, Rect rect) 
+{
+    vec4 verts[4] =
+    {
+        mat4x4_Mul_v(transform, new_vec4_v2(rect.Pos, 0.f, 1.f)),
+        mat4x4_Mul_v(transform, new_vec4(rect.x + rect.w, rect.y, 0.f, 1.f)),
+        mat4x4_Mul_v(transform, new_vec4_v2(vec2_Add(rect.Pos, rect.Size), 0.f, 1.f)),
+        mat4x4_Mul_v(transform, new_vec4(rect.x, rect.y + rect.h, 0.f, 1.f)),
+    };
+    vec2 minPos = new_vec2_v4(verts[0]);
+    vec2 maxPos = new_vec2_v4(verts[0]);
+    for (int i = 0; i < 4; i++) 
+    {
+        minPos.x = min(minPos.x, verts[i].x);
+        minPos.y = min(minPos.y, verts[i].y);
+        maxPos.x = max(maxPos.x, verts[i].x);
+        maxPos.y = max(maxPos.y, verts[i].y);
+    }
+    vec2 Size = vec2_Sub(maxPos, minPos);
+    return new_Rect_ps(minPos, Size);
 }
 
 #define PI 3.1415f

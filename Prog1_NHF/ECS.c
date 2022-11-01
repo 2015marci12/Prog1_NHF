@@ -55,7 +55,7 @@ size_t SparseMap_Emplace(SparseMap_t* ptr, entity_t entity)
 	{
 		size_t newSize = (size_t)entity + 1ull;
 		ptr->sparse = (entity_t*)realloc(ptr->sparse, newSize * sizeof(entity_t));
-		memset(ptr->sparse + ptr->sparse_size, UINT32_MAX, newSize - ptr->sparse_size);
+		memset(ptr->sparse + ptr->sparse_size, -1, (newSize - ptr->sparse_size) * sizeof(entity_t));
 		ptr->sparse_size = newSize;
 	}
 	ptr->sparse[entity] = (entity_t)ptr->dense_size;
@@ -63,7 +63,7 @@ size_t SparseMap_Emplace(SparseMap_t* ptr, entity_t entity)
 	{
 		size_t newCap = max(ptr->dense_capacity * 2, 32);
 		ptr->dense = (entity_t*)realloc(ptr->dense, newCap * sizeof(entity_t));
-		memset(ptr->dense + ptr->dense_capacity, UINT32_MAX, newCap - ptr->dense_capacity);
+		memset(ptr->dense + ptr->dense_capacity, -1, (newCap - ptr->dense_capacity) * sizeof(entity_t));
 		ptr->dense_capacity = newCap;
 	}
 	ptr->dense[ptr->dense_size] = entity;

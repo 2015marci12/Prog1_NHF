@@ -260,11 +260,9 @@ void FireCollisionEvents(Scene_t* scene)
 				: categoryCheck;
 			if (colloide)
 			{
-				//Calculate the transformed AABBs. TODO may want to recalculate the size according to rotation.
-				vec2 aPos = new_vec2_v4(mat4x4_Mul_v(transform1, new_vec4_v2(a->body.Pos, 0.f, 1.f))),
-					bPos = new_vec2_v4(mat4x4_Mul_v(transform2, new_vec4_v2(b->body.Pos, 0.f, 1.f)));
-				Rect aMov = new_Rect_ps(aPos, a->body.Size),
-					bMov = new_Rect_ps(bPos, b->body.Size);
+				//Calculate the transformed AABBs.
+				Rect aMov = Rect_Transformed(transform1, a->body),
+					bMov = Rect_Transformed(transform2, b->body);
 
 				//Fill out event manifold and check collision.			
 				if (Rect_Intersects(aMov, bMov, &e.normal, &e.penetration))
@@ -280,6 +278,18 @@ void FireCollisionEvents(Scene_t* scene)
 				continue; //Layer masks incompatible.
 			}
 		}
+	}
+}
+
+void DebugDrawColloiders(Scene_t* scene, Renderer2D* renderer)
+{
+	for (View_t outter = View_Create(scene, 2, Component_TRANSFORM, Component_COLLOIDER);
+		!View_End(&outter); View_Next(&outter))
+	{
+		Colloider* coll = View_GetComponent(&outter, 1);
+		mat4 transform = CalcWorldTransform(scene, View_GetCurrent(&outter));
+		Rect aMov = Rect_Transformed(transform, coll->body);
+		Renderer2D_DrawRect(renderer, aMov, 1.f, new_vec4(0.f, 1.f, 0.f, 1.f));
 	}
 }
 
@@ -348,7 +358,7 @@ void PhysicsResolveCollision(Scene_t* scene, CollisionEvent* e)
 	//Only able to resolve collisons between 2 physics objects.
 	if (!(aPhys && bPhys)) return;
 	//Cannot resolve if both objects are static. dynamic objects must have movement components.
-	if (!((aPhys->inv_mass == 0.f) && aMov || (bPhys->inv_mass == 0.f) && bMov)) return;
+	if (!((aPhys->inv_mass != 0.f) && aMov || (bPhys->inv_mass != 0.f) && bMov)) return;
 
 	vec2 aVel = aMov ? aMov->velocity : new_vec2_v(0.f);
 	vec2 bVel = bMov ? bMov->velocity : new_vec2_v(0.f);
@@ -369,15 +379,15 @@ void PhysicsResolveCollision(Scene_t* scene, CollisionEvent* e)
 
 	// Apply impulse
 	vec2 impulse = vec2_s_Mul(j, e->normal);
-	if (aMov) aMov->velocity = vec2_Add(vec2_s_Mul(aPhys->inv_mass, impulse), aMov->velocity);
-	if (bMov) bMov->velocity = vec2_Sub(vec2_s_Mul(bPhys->inv_mass, impulse), bMov->velocity);
+	if (aMov) aMov->velocity = vec2_Sub(aMov->velocity, vec2_s_Mul(aPhys->inv_mass, impulse));
+	if (bMov) bMov->velocity = vec2_Add(bMov->velocity, vec2_s_Mul(bPhys->inv_mass, impulse));
 
 	//Positional correction.
 	const float factor = 0.2f;
 	const float slop = 0.01f;
 	vec3 correction = vec3_Mul_s(new_vec3_v2(e->normal, 0.f),
 		max(e->penetration - slop, 0.0f) * factor / (aPhys->inv_mass + bPhys->inv_mass));
-	*aTransform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), vec3_Mul_s(correction, aPhys->inv_mass)), *aTransform);
+	*aTransform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), vec3_Mul_s(correction, -aPhys->inv_mass)), *aTransform);
 	*bTransform = mat4x4x4_Mul(mat4_Translate(mat4x4_Identity(), vec3_Mul_s(correction, bPhys->inv_mass)), *bTransform);
 }
 

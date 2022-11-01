@@ -108,8 +108,6 @@ int main(int argc, char* argv[])
 		UpdateGame(&game, timediff);
 		RenderGame(&game, &renderer);
 
-		//Renderer2D_NextFrame(&renderer);
-
 		SDL_GL_SwapWindow(window);
 
 		SDL_PumpEvents();

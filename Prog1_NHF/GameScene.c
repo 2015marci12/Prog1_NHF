@@ -24,19 +24,43 @@ void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* inpu
 	else input->selectedWeapon = -1;
 }
 
-void SetupWalls(Game* game) 
+void SpawnFloorCeilingTile(Game* game, float scale, float x)
 {
 	//Floor
 	entity_t floor = Scene_CreateEntity(game->scene);
 	mat4* transform = Scene_AddComponent(game->scene, floor, Component_TRANSFORM);
 	Sprite* sprite = Scene_AddComponent(game->scene, floor, Component_SPRITE);
 
-	float scale = 3.f;
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.f, 0.f));
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(x, -game->constants.arena_height / 2, 0.f));
 	*sprite = Sprite_init();
 	sprite->size = new_vec2(scale, scale * 2.f);
 	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[GROUND_TEX], new_uvec2(1, 1), new_uvec2(1, 2));
-	//sprite->subTex.texRect.w = game->constants.arena_width / scale;
+}
+
+void SetupWalls(Game* game)
+{
+	float scale = 3.f;
+	for (float x = -game->constants.arena_width / 2.f; x < game->constants.arena_width / 2 + scale; x += scale)
+	{
+		SpawnFloorCeilingTile(game, scale, x);
+	}
+
+	//FloorColloider.
+	entity_t floor = Scene_CreateEntity(game->scene);
+	mat4* transform = Scene_AddComponent(game->scene, floor, Component_TRANSFORM);
+	Colloider* colloider = Scene_AddComponent(game->scene, floor, Component_COLLOIDER);
+	PhysicsComponent* physics = Scene_AddComponent(game->scene, floor, Component_PHYSICS);
+
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, -game->constants.arena_height / 2, 0.f));
+
+	colloider->body = new_Rect(-game->constants.arena_width / 2, -scale, game->constants.arena_width, scale * 2.f);
+	colloider->maskBits = COLLISIONMASK_WALL;
+	colloider->categoryBits = Layer_Walls;
+	colloider->groupIndex = 0;
+
+	physics->inv_mass = 0.f;
+	physics->mass = 0.f;
+	physics->restitution = 1.f;
 }
 
 Game* InitGame(Game* game, SDL_Window* window)
@@ -91,14 +115,14 @@ Game* InitGame(Game* game, SDL_Window* window)
 		Colloider* pcoll = Scene_AddComponent(game->scene, e, Component_COLLOIDER);
 		PhysicsComponent* pphys = Scene_AddComponent(game->scene, e, Component_PHYSICS);
 
-		*tr = mat4x4_Identity();
+		*tr = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, -game->constants.arena_height * 0.3f, 0.f));
 
 		s->subTex = TextureAtlas_SubTexture(&game->Textures[PLAYER_TEX], new_uvec2(0, 3), new_uvec2(1, 1));;
 		s->tintColor = new_vec4_v(1.f);
 		s->size = new_vec2(2.f, 1.0f);
 		for (int i = 0; i < 5; i++) s->overlays[i] = SubTexture_empty();
 
-		PlaneComponent temp = { 
+		PlaneComponent temp = {
 			game->constants.lift_coeff,
 			game->constants.drag_coeff,
 			game->constants.thrust_booster,
@@ -112,14 +136,14 @@ Game* InitGame(Game* game, SDL_Window* window)
 		pc->shootingTimer = MakeTimer();
 		pc->boosterParticleTimer = MakeTimer();
 
-		pcoll->body = new_Rect(-0.5f, -0.5f, 1.f, 1.f);
+		pcoll->body = new_Rect(-0.5f, -0.2f, 1.f, 0.4f);
 		pcoll->categoryBits = Layer_Player;
 		pcoll->maskBits = COLLISIONMASK_PLAYER;
-		pcoll->groupIndex = FRIENDLY;	
+		pcoll->groupIndex = FRIENDLY;
 
-		pphys->inv_mass = 1.f / game->constants.plane_mass;
+		pphys->inv_mass = CalcInvMass(game->constants.plane_mass);
 		pphys->mass = game->constants.plane_mass;
-		pphys->restitution = 0.4f;
+		pphys->restitution = 1.f;
 
 		//Camera
 		int w, h;
@@ -154,7 +178,7 @@ void CleanupGame(Game* game)
 		if (game->Textures[i].texture) GLTexture_Destroy(game->Textures[i].texture);
 	}
 
-	for(int i = 0; i < PARTICLESYS_COUNT; i++)
+	for (int i = 0; i < PARTICLESYS_COUNT; i++)
 	{
 		if (game->Particles[i]) Particles_Delete(game->Particles[i]);
 	}
@@ -202,10 +226,12 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	RenderSprites(game->scene, renderer, cameraMVP);
 
 	//Render particles.
-	for (int i = 0; i < PARTICLESYS_COUNT; i++) 
+	for (int i = 0; i < PARTICLESYS_COUNT; i++)
 	{
-		//Particles_Draw(game->Particles[i], renderer);
+		Particles_Draw(game->Particles[i], renderer);
 	}
+
+	DebugDrawColloiders(game->scene, renderer);
 
 	//Render test background.
 	int w, h;
@@ -271,12 +297,10 @@ bool GameOnCollision(SDL_Event* e, void* userData)
 {
 	//Translate pointers.
 	CollisionEvent* ev = e->user.data1;
-	Game* game = e->user.data2;
+	Scene_t* scene = e->user.data2;
 
 	//Physics.
-	PhysicsResolveCollision(game->scene, ev);
-
-	INFO("collision between %d and %d\n", ev->a, ev->b);
+	PhysicsResolveCollision(scene, ev);
 
 	//TODO gamelogic.
 

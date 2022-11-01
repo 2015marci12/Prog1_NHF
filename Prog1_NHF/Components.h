@@ -115,6 +115,10 @@ uint32_t CollisionEventType();
 * Fire collision events in the scene.
 */
 void FireCollisionEvents(Scene_t* scene);
+/*
+* Draw each and every colloider. Useful for debug purposes.
+*/
+void DebugDrawColloiders(Scene_t* scene, Renderer2D* renderer);
 
 
 /*
