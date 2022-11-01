@@ -56,15 +56,25 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 	View_t view = View_Create(game->scene, 5, Component_TRANSFORM, Component_PLAYER, Component_MOVEMENT, Component_SPRITE, Component_PLANE);
 
 	mat4* transform = View_GetComponent(&view, 0);
+	mat4* cam_transform;
+	GetCamera(game->scene, &cam_transform, NULL, NULL);
 	PlayerComponent* pc = View_GetComponent(&view, 1);
 	MovementComponent* mc = View_GetComponent(&view, 2);
 	PlaneComponent* pm = View_GetComponent(&view, 4);
 	Sprite* sprite = View_GetComponent(&view, 3);
 
 	vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+	vec3 CamPos = new_vec3_v4(mat4x4_Mul_v(*cam_transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+	int w, h;
+	SDL_GetWindowSize(game->window, &w, &h);
+	float aspect = (float)w / (float)h;
+	vec2 correction = vec2_Div(new_vec2_v3(vec3_Sub(CamPos, Pos)),
+		new_vec2(aspect * game->constants.viewport_scale, game->constants.viewport_scale));
+	vec2 trueLookVec = vec2_Add(vec2_Mul_s(input->LookDir, input->Thrust), correction);
+
 
 	//Look at mouse.
-	float angle = vec2_Angle(input->LookDir);
+	float angle = vec2_Angle(trueLookVec);
 	*transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), Pos), angle, new_vec3(0.f, 0.f, 1.f));
 
 	if (mc->velocity.x < 0) *transform = mat4_Scale(*transform, new_vec3(1.f, -1.f, 1.f)); //Invert sprite if the velocity is facing the other way.
@@ -96,7 +106,7 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 		vec2 ppos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(-0.8f, 0.f, 0.f, 1.f)));
 
 		Particle p = MakeParticle(ppos, 0.f, col, lifetime);
-		p.Velocity = vec2_Add(vec2_Mul_s(mc->velocity, -0.7f), vec2_s_Mul(vec2_Len(mc->velocity) * 0.3f, new_vec2(((float)rand() / (float)(RAND_MAX)) - 0.5f, ((float)rand() / (float)(RAND_MAX)) - 0.5f)));
+		p.Velocity = vec2_Add(vec2_Mul_s(mc->velocity, -0.5f), vec2_s_Mul(vec2_Len(mc->velocity) * 0.3f, new_vec2(((float)rand() / (float)(RAND_MAX)) - 0.5f, ((float)rand() / (float)(RAND_MAX)) - 0.5f)));
 		p.EndColor.a = 0.f;
 
 		if (GetElapsedSeconds(pc->boosterParticleTimer) > game->constants.booster_particle_time)

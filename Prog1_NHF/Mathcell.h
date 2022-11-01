@@ -532,5 +532,10 @@ static Rect Rect_Transformed(mat4 transform, Rect rect)
     return new_Rect_ps(minPos, Size);
 }
 
+static float clamp(float low, float high, float val) 
+{
+    return max(low, min(high, val));
+}
+
 #define PI 3.1415f
 
