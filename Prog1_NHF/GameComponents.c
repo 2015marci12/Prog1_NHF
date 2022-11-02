@@ -195,6 +195,7 @@ void UpdateHealth(Game* game, float dt)
 		!View_End(&v);)
 	{
 		HealthComponent* health = View_GetComponent(&v, 0);
+		health->invincibility_time -= dt;
 		if (health->health <= 0.f)
 		{
 			mat4* transform = Scene_Get(game->scene, View_GetCurrent(&v), Component_TRANSFORM);
@@ -212,11 +213,43 @@ void UpdateHealth(Game* game, float dt)
 		else
 		{
 			mat4* transform = Scene_Get(game->scene, View_GetCurrent(&v), Component_TRANSFORM);
-			if (transform)
+			if (transform && (GetElapsedSeconds(health->lastParticle) > 0.05f))
 			{
-				//Damage animation. TODO.
+				health->lastParticle = MakeTimer();
+
+				//Damage animation.
 				vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+				int damageLevel = (int)floor(health->health / health->max_health * 5.f);
+				float rot = (float)rand() / (float)RAND_MAX;
+				float v = (float)rand() / (float)RAND_MAX;
+				vec2 velrand = vec2_Rot(new_vec2(0.f, 0.5f), rot);
+				rot *= PI * 2.f;
+				Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), 1.f);
+				p.Velocity = vec2_Add(new_vec2(0.f, 2.f), velrand);
+				p.EndSize = new_vec2_v(1.f);
+				switch (damageLevel)
+				{
+				case 0:
+					p.LifeTime = Animaton_GetDuration(&game->Animations[HEAVY_FIRE_ANIM]);
+					Particles_Emit(game->Particles[HEAVY_FIRE_PARTICLES], p);
+					break;
+				case 1:
+					p.LifeTime = Animaton_GetDuration(&game->Animations[LIGHT_FIRE_ANIM]);
+					Particles_Emit(game->Particles[LIGHT_FIRE_PARTICLES], p);
+					break;
+				case 2:
+					p.LifeTime = Animaton_GetDuration(&game->Animations[HEAVY_SMOKE_ANIM]);
+					Particles_Emit(game->Particles[HEAVY_SMOKE_PARTICLES], p);
+					break;
+				case 3:
+					p.LifeTime = Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]);
+					Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
+					break;
+				default:
+					break;
+				}
 			}
+			View_Next(&v);
 		}
 	}
 }
@@ -225,4 +258,17 @@ void RegisterProjectile(Scene_t* scene)
 {
 	ComponentInfo_t cinf = COMPONENT_DEF(Component_PROJECTILE, ProjectileComponent);
 	Scene_AddComponentType(scene, cinf);
+}
+
+void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
+{
+	//TODO
+}
+
+void RegisterGameComponents(Scene_t* scene)
+{
+	RegisterPlane(scene);
+	RegisterPlayer(scene);
+	RegisterHealth(scene);
+	RegisterProjectile(scene);
 }

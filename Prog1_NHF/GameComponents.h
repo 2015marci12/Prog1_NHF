@@ -30,6 +30,7 @@ typedef struct HealthComponent
 	float health;
 	float max_health;
 	float invincibility_time;
+	Timer_t lastParticle;
 } HealthComponent;
 
 void RegisterHealth(Scene_t* scene);
@@ -42,15 +43,6 @@ typedef struct ProjectileComponent
 
 void RegisterProjectile(Scene_t* scene);
 
-void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
-{
-	//TODO
-}
+void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
 
-void RegisterGameComponents(Scene_t* scene) 
-{
-	RegisterPlane(scene);
-	RegisterPlayer(scene);
-	RegisterHealth(scene);
-	RegisterProjectile(scene);
-}
+void RegisterGameComponents(Scene_t* scene);

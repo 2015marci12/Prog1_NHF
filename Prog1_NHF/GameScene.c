@@ -133,7 +133,17 @@ Game* InitGame(Game* game, SDL_Window* window)
 		explosionData.z = 1.f;
 		game->Particles[PARTICLE_EXPLOSION] = Particles_New(400u, explosionData);
 
-		//TODO smoke and fire particles.
+		ParticleSystemData smokeAndFireData;
+		smokeAndFireData.animation = &game->Animations[LIGHT_SMOKE_ANIM];
+		smokeAndFireData.size = new_vec2_v(0.1f);
+		smokeAndFireData.z = 1.f;
+		game->Particles[LIGHT_SMOKE_PARTICLES] = Particles_New(100u, smokeAndFireData);
+		smokeAndFireData.animation = &game->Animations[HEAVY_SMOKE_ANIM];
+		game->Particles[HEAVY_SMOKE_PARTICLES] = Particles_New(100u, smokeAndFireData);
+		smokeAndFireData.animation = &game->Animations[LIGHT_FIRE_ANIM];
+		game->Particles[LIGHT_FIRE_PARTICLES] = Particles_New(100u, smokeAndFireData);
+		smokeAndFireData.animation = &game->Animations[HEAVY_FIRE_ANIM];
+		game->Particles[HEAVY_FIRE_PARTICLES] = Particles_New(100u, smokeAndFireData);
 
 		//Spawn player and create camera.
 
@@ -146,6 +156,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		MovementComponent* mc = Scene_AddComponent(game->scene, e, Component_MOVEMENT);
 		Colloider* pcoll = Scene_AddComponent(game->scene, e, Component_COLLOIDER);
 		PhysicsComponent* pphys = Scene_AddComponent(game->scene, e, Component_PHYSICS);
+		HealthComponent* phealth = Scene_AddComponent(game->scene, e, Component_HEALTH);
 
 		*tr = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, -game->constants.arena_height * 0.3f, 0.f));
 
@@ -176,6 +187,11 @@ Game* InitGame(Game* game, SDL_Window* window)
 		pphys->inv_mass = CalcInvMass(game->constants.plane_mass);
 		pphys->mass = game->constants.plane_mass;
 		pphys->restitution = 1.f;
+
+		phealth->health = game->constants.player_health * 0.1f;
+		phealth->max_health = game->constants.player_health;
+		phealth->invincibility_time = 0.f;
+		phealth->lastParticle = MakeTimer();
 
 		//Camera
 		int w, h;
@@ -234,6 +250,7 @@ void UpdateGame(Game* game, float dt)
 	UpdatePlayer(game, &inputstate, dt);
 	UpdateMovement(game->scene, dt);
 	UpdateLifetimes(game->scene);
+	UpdateHealth(game, dt);
 	GameUpdateCamera(game, &inputstate);
 	FireCollisionEvents(game->scene);
 
