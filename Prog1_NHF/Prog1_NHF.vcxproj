@@ -65,7 +65,11 @@
     <None Include="Resources\BoosterAnim.ini" />
     <None Include="Resources\CannonAnim.ini" />
     <None Include="Resources\ExplosionAnim.ini" />
+    <None Include="Resources\HeavyFireAnim.ini" />
+    <None Include="Resources\LightFireAnim.ini" />
+    <None Include="Resources\LightSmokeAnim.ini" />
     <None Include="Resources\MissileAnim.ini" />
+    <None Include="Resources\HeavySmokeAnim.ini" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

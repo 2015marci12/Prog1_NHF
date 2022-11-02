@@ -19,6 +19,10 @@ typedef struct Particle
 	vec4 CurrentColor;
 	vec4 StartColor;
 	vec4 EndColor;
+
+	vec2 StartSize;
+	vec2 CurrentSize;
+	vec2 EndSize;
 } Particle;
 
 typedef struct ParticleSystemData 
@@ -43,4 +47,5 @@ void Particles_Delete(ParticleSystem* inst);
 void Particles_Update(ParticleSystem* inst, float dt);
 void Particles_Draw(ParticleSystem* inst, Renderer2D* renderer);
 Particle MakeParticle(vec2 Pos, float rot, vec4 col, float lifetime);
+Particle MakeParticle_s(vec2 Pos, float rot, vec4 col, vec2 size, float lifetime);
 void Particles_Emit(ParticleSystem* inst, Particle p);

@@ -98,13 +98,27 @@ Game* InitGame(Game* game, SDL_Window* window)
 
 		game->scene = Scene_New();
 		RegisterStandardComponents(game->scene);
-		ComponentInfo_t playerInfo = COMPONENT_DEF(Component_PLAYER, PlayerComponent);
-		Scene_AddComponentType(game->scene, playerInfo);
-		ComponentInfo_t planeInfo = COMPONENT_DEF(Component_PLANE, PlaneComponent);
-		Scene_AddComponentType(game->scene, planeInfo);
+		RegisterGameComponents(game->scene);
 
 		LoadConfig(&game->constants, "Config.ini");
 		game->window = window;
+
+		//Load assets.
+		game->Textures[PLAYER_TEX] = TextureAtlas_create(LoadTex2D("Resources\\jet.png"), new_uvec2(64, 32));
+		game->Textures[WEAPON_TEX] = TextureAtlas_create(LoadTex2D("Resources\\weapons.png"), new_uvec2(16, 16));
+		game->Textures[EXPLOSION_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Explosion.png"), new_uvec2(96, 96));
+		game->Textures[GROUND_TEX] = TextureAtlas_create(LoadTex2D("Resources\\GroundTiling.png"), new_uvec2(32, 32));
+		game->Textures[SMOKE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Smoke_Fire.png"), new_uvec2(16, 16));
+
+		Animation_FromIni("Resources\\BoosterAnim.ini", &game->Animations[BOOSTER_ANIM], &game->Textures[PLAYER_TEX]);
+		Animation_FromIni("Resources\\CannonAnim.ini", &game->Animations[CANNON_ANIM], &game->Textures[PLAYER_TEX]);
+		Animation_FromIni("Resources\\MissileAnim.ini", &game->Animations[MISSILE_ANIM], &game->Textures[WEAPON_TEX]);
+		Animation_FromIni("Resources\\ExplosionAnim.ini", &game->Animations[EXPLOSION_ANIM], &game->Textures[EXPLOSION_TEX]);
+
+		Animation_FromIni("Resources\\LightSmokeAnim.ini", &game->Animations[LIGHT_SMOKE_ANIM], &game->Textures[SMOKE_TEX]);
+		Animation_FromIni("Resources\\HeavySmokeAnim.ini", &game->Animations[HEAVY_SMOKE_ANIM], &game->Textures[SMOKE_TEX]);
+		Animation_FromIni("Resources\\LightFireAnim.ini", &game->Animations[LIGHT_FIRE_ANIM], &game->Textures[SMOKE_TEX]);
+		Animation_FromIni("Resources\\HeavyFireAnim.ini", &game->Animations[HEAVY_FIRE_ANIM], &game->Textures[SMOKE_TEX]);
 
 		//Particle systems.
 		ParticleSystemData boosterData;
@@ -115,20 +129,11 @@ Game* InitGame(Game* game, SDL_Window* window)
 
 		ParticleSystemData explosionData;
 		explosionData.animation = &game->Animations[EXPLOSION_ANIM];
-		explosionData.size = new_vec2_v(-1.f);
+		explosionData.size = new_vec2_v(1.f);
 		explosionData.z = 1.f;
 		game->Particles[PARTICLE_EXPLOSION] = Particles_New(400u, explosionData);
 
-		//Load assets.
-		game->Textures[PLAYER_TEX] = TextureAtlas_create(LoadTex2D("Resources\\jet.png"), new_uvec2(64, 32));
-		game->Textures[WEAPON_TEX] = TextureAtlas_create(LoadTex2D("Resources\\weapons.png"), new_uvec2(16, 16));
-		game->Textures[EXPLOSION_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Explosion.png"), new_uvec2(96, 96));
-		game->Textures[GROUND_TEX] = TextureAtlas_create(LoadTex2D("Resources\\GroundTiling.png"), new_uvec2(32, 32));
-
-		Animation_FromIni("Resources\\BoosterAnim.ini", &game->Animations[BOOSTER_ANIM], &game->Textures[PLAYER_TEX]);
-		Animation_FromIni("Resources\\CannonAnim.ini", &game->Animations[CANNON_ANIM], &game->Textures[PLAYER_TEX]);
-		Animation_FromIni("Resources\\MissileAnim.ini", &game->Animations[MISSILE_ANIM], &game->Textures[WEAPON_TEX]);
-		Animation_FromIni("Resources\\ExplosionAnim.ini", &game->Animations[EXPLOSION_ANIM], &game->Textures[EXPLOSION_TEX]);
+		//TODO smoke and fire particles.
 
 		//Spawn player and create camera.
 
@@ -274,7 +279,7 @@ void RenderGame(Game* game, Renderer2D* renderer)
 			new_vec4_v(1.f)
 		);
 	}
-
+	
 	for (float y = camPos.y - game->constants.viewport_scale; y < camPos.y + game->constants.viewport_scale; y++)
 	{
 		float y_ = floorf(y / 5.f) * 5.f;

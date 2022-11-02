@@ -20,6 +20,8 @@ enum ComponentTypes
 	Component_PHYSICS, //Physics
 	Component_PLAYER,
 	Component_PLANE,
+	Component_HEALTH,
+	Component_PROJECTILE,
 };
 
 /*

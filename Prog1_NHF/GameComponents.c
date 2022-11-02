@@ -1,5 +1,11 @@
 #include "GameComponents.h"
 
+void RegisterPlane(Scene_t* scene)
+{
+	ComponentInfo_t planeInfo = COMPONENT_DEF(Component_PLANE, PlaneComponent);
+	Scene_AddComponentType(scene, planeInfo);
+}
+
 void MovePlanes(Game* game, float dt)
 {
 	for (View_t view = View_Create(game->scene, 3, Component_TRANSFORM, Component_PLANE, Component_MOVEMENT);
@@ -49,6 +55,12 @@ bool SpawnExplosion(Scene_t* scene, entity_t e, const void* d)
 	Particle p = MakeParticle(Pos, 0.f, new_vec4_v(1.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
 	Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
 	return false;
+}
+
+void RegisterPlayer(Scene_t* scene)
+{
+	ComponentInfo_t playerInfo = COMPONENT_DEF(Component_PLAYER, PlayerComponent);
+	Scene_AddComponentType(scene, playerInfo);
 }
 
 void UpdatePlayer(Game* game, InputState* input, float dt)
@@ -169,4 +181,48 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 	{
 		sprite->overlays[1] = SubTexture_empty();
 	}
+}
+
+void RegisterHealth(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_HEALTH, HealthComponent);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateHealth(Game* game, float dt)
+{
+	for (View_t v = View_Create(game->scene, 1, Component_HEALTH);
+		!View_End(&v);)
+	{
+		HealthComponent* health = View_GetComponent(&v, 0);
+		if (health->health <= 0.f)
+		{
+			mat4* transform = Scene_Get(game->scene, View_GetCurrent(&v), Component_TRANSFORM);
+			if (transform)
+			{
+				//Death animation. TODO maybe change to something with a bit more OOMPH. Also sound effect.
+				vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+
+				Particle p = MakeParticle_s(Pos, 0.f, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
+				Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
+			}
+			KillChildren(game->scene, View_GetCurrent(&v));
+			View_DestroyCurrent_FindNext(&v);
+		}
+		else
+		{
+			mat4* transform = Scene_Get(game->scene, View_GetCurrent(&v), Component_TRANSFORM);
+			if (transform)
+			{
+				//Damage animation. TODO.
+				vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+			}
+		}
+	}
+}
+
+void RegisterProjectile(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_PROJECTILE, ProjectileComponent);
+	Scene_AddComponentType(scene, cinf);
 }

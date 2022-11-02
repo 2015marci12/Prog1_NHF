@@ -148,5 +148,17 @@
     <None Include="Resources\MissileAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="Resources\HeavySmokeAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\HeavyFireAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\LightFireAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\LightSmokeAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

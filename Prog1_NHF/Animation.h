@@ -21,7 +21,7 @@ TextureAtlas TextureAtlas_create(GLTexture* tex, uvec2 unit);
 SubTexture TextureAtlas_SubTexture(TextureAtlas* atlas, uvec2 tile, uvec2 size);
 SubTexture SubTexture_empty();
 
-#define MAX_ANIMATION_FRAMES 16
+#define MAX_ANIMATION_FRAMES 32
 
 typedef struct Animation 
 {

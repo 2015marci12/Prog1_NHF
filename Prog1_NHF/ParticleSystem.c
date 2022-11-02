@@ -36,11 +36,10 @@ void Particles_Update(ParticleSystem* inst, float dt)
 			p->rotation += p->rotational_vel * dt;
 
 			//Color linear interpolation.
-			p->CurrentColor = vec4_Add(p->StartColor,
-				vec4_Mul_s(
-					vec4_Sub(p->EndColor, p->StartColor),
-					t)
-			);
+			p->CurrentColor = vec4_Add(p->StartColor, vec4_Mul_s(vec4_Sub(p->EndColor, p->StartColor), t));
+
+			//Size linear interpolation.
+			p->CurrentSize = vec2_Add(p->StartSize, vec2_Mul_s(vec2_Sub(p->EndSize, p->StartSize), t));
 
 			//Delete if lifetime is over.
 			if (t > 1.f)
@@ -70,7 +69,7 @@ void Particles_Draw(ParticleSystem* inst, Renderer2D* renderer)
 
 			Renderer2D_DrawRotatedQuad_s(renderer,
 				new_vec3_v2(p->Position, inst->data.z),
-				inst->data.size,
+				vec2_Mul(inst->data.size, p->CurrentSize),
 				p->rotation,
 				p->CurrentColor,
 				tex);
@@ -94,6 +93,33 @@ Particle MakeParticle(vec2 Pos, float rot, vec4 col, float lifetime)
 	p.StartColor = col;
 	p.EndColor = col;
 	p.CurrentColor = col;
+
+	p.StartSize = new_vec2_v(1.f);
+	p.EndSize = new_vec2_v(1.f);
+	p.CurrentSize = new_vec2_v(1.f);
+	return p;
+}
+
+Particle MakeParticle_s(vec2 Pos, float rot, vec4 col, vec2 size, float lifetime)
+{
+	Particle p = { 0 };
+	p.Position = Pos;
+	p.Velocity = new_vec2_v(0.f);
+	p.Acceleration = new_vec2_v(0.f);
+
+	p.rotation = rot;
+	p.rotational_vel = 0.f;
+
+	p.LifeTime = lifetime;
+	p.SpawnTime = MakeTimer();
+
+	p.StartColor = col;
+	p.EndColor = col;
+	p.CurrentColor = col;
+
+	p.StartSize = size;
+	p.EndSize = size;
+	p.CurrentSize = size;
 	return p;
 }
 
