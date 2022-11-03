@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include "Log.h"
+#include "Random.h"
 
 #ifndef BIT
 #	define BIT(x) (1ull << (x))

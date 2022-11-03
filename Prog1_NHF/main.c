@@ -14,19 +14,19 @@ SDL_Window* window;
 Game game;
 
 //Handle window events.
-bool OnWindowEvent(SDL_Event* e, void* userData) 
+bool OnWindowEvent(SDL_Event* e, void* userData)
 {
 	//Translate pointers.
 	SDL_WindowEvent* we = &e->window;
 
 	//Handle resize.
-	if (we->event == SDL_WINDOWEVENT_RESIZED) 
+	if (we->event == SDL_WINDOWEVENT_RESIZED)
 	{
 		//Get width and height.
 		int w = we->data1, h = we->data2;
 
 		//Return if minimized.
-		if (h <= 0 || w <= 0) return true; 
+		if (h <= 0 || w <= 0) return true;
 
 		//Set viewport.
 		glViewport(0, 0, w, h);
@@ -37,6 +37,9 @@ bool OnWindowEvent(SDL_Event* e, void* userData)
 
 int main(int argc, char* argv[])
 {
+	//Init RNG.
+	Rand_Init();
+
 	/* SDL inicializálása és ablak megnyitása */
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 	{
@@ -49,7 +52,7 @@ int main(int argc, char* argv[])
 	window = SDL_CreateWindow("SDL peldaprogram",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		660, 480,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN_DESKTOP);
 
 	if (window == NULL)
 	{

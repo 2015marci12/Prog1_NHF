@@ -272,7 +272,7 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	Renderer2D_Clear(renderer, new_vec4_v(0.f)); //Clear screen.
 
 	//Render scene.
-	RenderSprites(game->scene, renderer, cameraMVP);
+	RenderSprites(game->scene, renderer);
 
 	//Render particles.
 	for (int i = 0; i < PARTICLESYS_COUNT; i++)

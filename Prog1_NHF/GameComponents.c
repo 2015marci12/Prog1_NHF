@@ -113,13 +113,13 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 			new_vec4(0.7f, 0.7f, 0.7f, 1.f),
 			new_vec4(0.9f, 0.9f, 0.9f, 1.f),
 		};
-		vec4 col = colors[(int)(((float)rand() / (float)(RAND_MAX)) * 6.f)];
-		float lifetime = 0.2f + ((float)rand() / (float)(RAND_MAX)) * 0.2f;
+		vec4 col = colors[RandI32_Range(0, 6)];
+		float lifetime = RandF_1_Range(0.2f, 0.4f);
 
 		vec2 ppos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(-0.8f, 0.f, 0.f, 1.f)));
 
 		Particle p = MakeParticle(ppos, 0.f, col, lifetime);
-		p.Velocity = vec2_Add(vec2_Mul_s(mc->velocity, -0.5f), vec2_s_Mul(vec2_Len(mc->velocity) * 0.3f, new_vec2(((float)rand() / (float)(RAND_MAX)) - 0.5f, ((float)rand() / (float)(RAND_MAX)) - 0.5f)));
+		p.Velocity = vec2_Add(vec2_Mul_s(mc->velocity, -0.5f), vec2_s_Mul(vec2_Len(mc->velocity) * 0.3f, new_vec2(RandF_1_Range(-0.5f, 0.5f), RandF_1_Range(-0.5f, 0.5f))));
 		p.EndColor.a = 0.f;
 
 		if (GetElapsedSeconds(pc->boosterParticleTimer) > game->constants.booster_particle_time)
@@ -221,8 +221,8 @@ void UpdateHealth(Game* game, float dt)
 				//Damage animation.
 				vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 				int damageLevel = (int)floor(health->health / health->max_health * 5.f);
-				float rot = (float)rand() / (float)RAND_MAX;
-				float v = (float)rand() / (float)RAND_MAX;
+				float rot = RandF_1_Range(0.f, 2.f * PI);
+				float v = RandF_1();
 				vec2 velrand = vec2_Rot(new_vec2(0.f, 0.5f), rot);
 				rot *= PI * 2.f;
 				Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), 1.f);

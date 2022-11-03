@@ -1,4 +1,6 @@
 #include "Random.h"
+#include <time.h>
+#include <math.h>
 
 /* initializes mt[NN] with a seed */
 void init_genrand64(MT64_Gen_t* rand, uint64_t seed)
@@ -106,15 +108,51 @@ double Rand_double_3(MT64_Gen_t* rand)
 
 float Rand_float_1(MT64_Gen_t* rand)
 {
-    return (Rand_uint64(rand) >> 35) * (1.f / 9007199254740991.f);
+    return (Rand_uint64(rand) >> 40) * (1.f / 16777215.f);
 }
 
 float Rand_float_2(MT64_Gen_t* rand)
 {
-    return (Rand_uint64(rand) >> 35) * (1.f / 9007199254740992.f);
+    return (Rand_uint64(rand) >> 40) * (1.f / 16777216.f);
 }
 
 float Rand_float_3(MT64_Gen_t* rand)
 {
-    return ((Rand_uint64(rand) >> 35) + 0.5f) * (1.f / 4503599627370496.f);
+    return ((Rand_uint64(rand) >> 41) + 0.5f) * (1.f / 8388608.f);
 }
+
+MT64_Gen_t global_gen;
+
+void Rand_Init()
+{
+    init_genrand64(&global_gen, 4503599627370496ull);
+}
+
+float RandF_1() { return Rand_float_1(&global_gen); }
+float RandF_2() { return Rand_float_2(&global_gen); }
+float RandF_3() { return Rand_float_3(&global_gen); }
+float RandF_1_Range(float min, float max) { return min + (max - min) * RandF_1(); }
+float RandF_2_Range(float min, float max) { return min + (max - min) * RandF_2(); }
+float RandF_3_Range(float min, float max) { return min + (max - min) * RandF_3(); }
+
+double RandD_1() { return Rand_double_1(&global_gen); }
+double RandD_2() { return Rand_double_2(&global_gen); }
+double RandD_3() { return Rand_double_3(&global_gen); }
+double RandD_1_Range(double min, double max) { return min + (max - min) * RandD_1(); }
+double RandD_2_Range(double min, double max) { return min + (max - min) * RandD_2(); }
+double RandD_3_Range(double min, double max) { return min + (max - min) * RandD_3(); }
+
+bool RandB() { return RandF_1() > 0.5f; }
+bool RandB_Threshold(float threshold) { return RandF_1() > threshold; }
+
+int32_t RandI32() { return Rand_int32(&global_gen); }
+int32_t RandI32_Range(int32_t min, int32_t max) { return min + (int32_t)roundf((float)(max - min) * RandF_1()); }
+
+uint32_t RandUI32() { return Rand_uint32(&global_gen); }
+uint32_t RandUI32_Range(uint32_t min, uint32_t max) { return min + (uint32_t)roundf((float)(max - min) * RandF_1()); }
+
+int64_t RandI64() { return Rand_int64(&global_gen); }
+int64_t RandI64_Range(int64_t min, int64_t max) { return min + (int64_t)round((double)(max - min) * RandD_1()); }
+
+uint64_t RandUI64() { return Rand_uint64(&global_gen); }
+uint64_t RandUI64_Range(uint64_t min, uint64_t max) { return min + (uint64_t)round((double)(max - min) * RandD_1()); }
