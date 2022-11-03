@@ -3,6 +3,7 @@
 #include "Log.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /*
 * Mersenne twister because srand can only be seeded once.
@@ -120,3 +121,38 @@ float Rand_float_2(MT64_Gen_t* rand);
 
 /* generates a random number on (0,1)-real-interval */
 float Rand_float_3(MT64_Gen_t* rand);
+
+
+/*
+* User-friendly API now that we don't need the ability to seed the RNG.
+*/
+void Rand_Init();
+
+float RandF_1();
+float RandF_2();
+float RandF_3();
+float RandF_1_Range(float min, float max);;
+float RandF_2_Range(float min, float max);;
+float RandF_3_Range(float min, float max);;
+
+double RandD_1();
+double RandD_2();
+double RandD_3();
+double RandD_1_Range(double min, double max);
+double RandD_2_Range(double min, double max);
+double RandD_3_Range(double min, double max);
+
+bool RandB();;
+bool RandB_Threshold(float threshold);
+
+int32_t RandI32();
+int32_t RandI32_Range(int32_t min, int32_t max);
+
+uint32_t RandUI32();
+uint32_t RandUI32_Range(uint32_t min, uint32_t max);
+
+int64_t RandI64();
+int64_t RandI64_Range(int64_t min, int64_t max);
+
+uint64_t RandUI64();
+uint64_t RandUI64_Range(uint64_t min, uint64_t max);
