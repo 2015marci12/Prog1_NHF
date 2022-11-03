@@ -137,13 +137,13 @@ Game* InitGame(Game* game, SDL_Window* window)
 		smokeAndFireData.animation = &game->Animations[LIGHT_SMOKE_ANIM];
 		smokeAndFireData.size = new_vec2_v(0.1f);
 		smokeAndFireData.z = 1.f;
-		game->Particles[LIGHT_SMOKE_PARTICLES] = Particles_New(100u, smokeAndFireData);
+		game->Particles[LIGHT_SMOKE_PARTICLES] = Particles_New(400u, smokeAndFireData);
 		smokeAndFireData.animation = &game->Animations[HEAVY_SMOKE_ANIM];
-		game->Particles[HEAVY_SMOKE_PARTICLES] = Particles_New(100u, smokeAndFireData);
+		game->Particles[HEAVY_SMOKE_PARTICLES] = Particles_New(400u, smokeAndFireData);
 		smokeAndFireData.animation = &game->Animations[LIGHT_FIRE_ANIM];
-		game->Particles[LIGHT_FIRE_PARTICLES] = Particles_New(100u, smokeAndFireData);
+		game->Particles[LIGHT_FIRE_PARTICLES] = Particles_New(400u, smokeAndFireData);
 		smokeAndFireData.animation = &game->Animations[HEAVY_FIRE_ANIM];
-		game->Particles[HEAVY_FIRE_PARTICLES] = Particles_New(100u, smokeAndFireData);
+		game->Particles[HEAVY_FIRE_PARTICLES] = Particles_New(400u, smokeAndFireData);
 
 		//Spawn player and create camera.
 
@@ -188,7 +188,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		pphys->mass = game->constants.plane_mass;
 		pphys->restitution = 1.f;
 
-		phealth->health = game->constants.player_health * 0.1f;
+		phealth->health = game->constants.player_health;
 		phealth->max_health = game->constants.player_health;
 		phealth->invincibility_time = 0.f;
 		phealth->lastParticle = MakeTimer();
@@ -347,9 +347,11 @@ bool GameOnCollision(SDL_Event* e, void* userData)
 	//Translate pointers.
 	CollisionEvent* ev = e->user.data1;
 	Scene_t* scene = e->user.data2;
+	Game* game = userData;
 
 	//Physics.
 	PhysicsResolveCollision(scene, ev);
+	ResolveCollisionProjectiles(game, ev->a, ev->b);
 
 	//TODO gamelogic.
 
@@ -381,4 +383,13 @@ void GameUpdateCamera(Game* game, InputState* input)
 
 	*transform = mat4_Translate(mat4x4_Identity(), Pos); //Set transfrom.
 
+}
+
+void GameRenderBackground(Game* game, Renderer2D* renderer)
+{
+	View_t playerView = View_Create(game->scene, 2, Component_PLAYER, Component_TRANSFORM);
+	mat4* transform = View_GetComponent(&playerView, 1);
+	vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+
+	
 }

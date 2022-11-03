@@ -109,3 +109,5 @@ bool GameOnCollision(SDL_Event* e, void* userData);
 
 void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* input);
 void GameUpdateCamera(Game* game, InputState* input);
+
+void GameRenderBackground(Game* game, Renderer2D* renderer);

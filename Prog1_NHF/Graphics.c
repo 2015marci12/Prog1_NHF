@@ -16,7 +16,7 @@ MessageCallback(GLenum source,
 	char* stringType = "";
 	switch (type)
 	{
-	case GL_DEBUG_TYPE_ERROR: stringType = "Error"; break;	//An error, typically from the API
+	case GL_DEBUG_TYPE_ERROR: stringType = "ERROR"; break;	//An error, typically from the API
 	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: stringType = "DEPRECATED_BEHAVIOR"; break;	//Some behavior marked deprecated has been used
 		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: stringType = "UNDEFINED_BEHAVIOR"; break;	//Something has invoked undefined behavior
 		case GL_DEBUG_TYPE_PORTABILITY: stringType = "PORTABILITY"; break;	//Some functionality the user relies upon is not portable
@@ -32,20 +32,20 @@ MessageCallback(GLenum source,
 	switch (severity)
 	{
 	case GL_DEBUG_SEVERITY_NOTIFICATION:
-		TRACE("GL %s: message = %s\n",
+		TRACE("GL %s: %s\n",
 			stringType, message);
 		break;
 	case GL_DEBUG_SEVERITY_LOW:
-		INFO("GL %s: message = %s\n",
+		INFO("GL %s: %s\n",
 			stringType, message);
 		break;
 	case GL_DEBUG_SEVERITY_MEDIUM:
-		WARN("GL %s: message = %s\n",
+		WARN("GL %s: %s\n",
 			stringType, message);
 		break;
 	case GL_DEBUG_SEVERITY_HIGH:
 	default:
-		ERROR("GL %s: message = %s\n",
+		ERROR("GL %s: %s\n",
 			stringType, message);
 		break;
 	}

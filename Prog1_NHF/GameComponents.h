@@ -30,6 +30,7 @@ typedef struct HealthComponent
 	float health;
 	float max_health;
 	float invincibility_time;
+	Timer_t lastHit;
 	Timer_t lastParticle;
 } HealthComponent;
 

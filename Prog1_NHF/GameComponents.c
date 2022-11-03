@@ -46,14 +46,16 @@ void MovePlanes(Game* game, float dt)
 	}
 }
 
-bool SpawnExplosion(Scene_t* scene, entity_t e, const void* d)
+bool SpawnSmoke(Scene_t* scene, entity_t e, const void* d)
 {
 	Game* game = d;
 	mat4* transform = Scene_Get(game->scene, e, Component_TRANSFORM);
 	vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-	
-	Particle p = MakeParticle(Pos, 0.f, new_vec4_v(1.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
-	Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
+
+	float rot = (float)rand() / (float)RAND_MAX;
+	Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
+	p.EndSize = new_vec2_v(1.f);
+	Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
 	return false;
 }
 
@@ -83,7 +85,6 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 	vec2 correction = vec2_Div(new_vec2_v3(vec3_Sub(CamPos, Pos)),
 		new_vec2(aspect * game->constants.viewport_scale, game->constants.viewport_scale));
 	vec2 trueLookVec = vec2_Add(vec2_Mul_s(input->LookDir, input->Thrust), correction);
-
 
 	//Look at mouse.
 	float angle = vec2_Angle(trueLookVec);
@@ -165,16 +166,17 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 			LifetimeComponent* lt = Scene_AddComponent(game->scene, bullet, Component_LIFETIME);
 			lt->timer = MakeTimer();
 			lt->lifetime = game->constants.bullet_lifeTime;
-			lt->userdata = NULL;
-			lt->callback = NULL; //TODO go poof when done.
 			lt->userdata = game;
-			lt->callback = SpawnExplosion;
+			lt->callback = SpawnSmoke;
 
 			Colloider* bColl = Scene_AddComponent(game->scene, bullet, Component_COLLOIDER);
 			bColl->body = new_Rect(-0.15f, -0.15f, 0.3f, 0.3f);
 			bColl->categoryBits = Layer_Bullets;
 			bColl->maskBits = COLLISIONMASK_BULLET;
 			bColl->groupIndex = FRIENDLY;
+
+			ProjectileComponent* bProj = Scene_AddComponent(game->scene, bullet, Component_PROJECTILE);
+			bProj->damage = game->constants.bullet_damage;
 		}
 	}
 	else
@@ -195,7 +197,6 @@ void UpdateHealth(Game* game, float dt)
 		!View_End(&v);)
 	{
 		HealthComponent* health = View_GetComponent(&v, 0);
-		health->invincibility_time -= dt;
 		if (health->health <= 0.f)
 		{
 			mat4* transform = Scene_Get(game->scene, View_GetCurrent(&v), Component_TRANSFORM);
@@ -260,9 +261,54 @@ void RegisterProjectile(Scene_t* scene)
 	Scene_AddComponentType(scene, cinf);
 }
 
+void ProjectileHit(HealthComponent* health, ProjectileComponent* proj)
+{
+	if (GetElapsedSeconds(health->lastHit) > health->invincibility_time)
+	{
+		health->health -= proj->damage;
+		health->lastHit = MakeTimer();
+	}
+}
+
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 {
-	//TODO
+	ProjectileComponent* projA = Scene_Get(game->scene, a, Component_PROJECTILE);
+	ProjectileComponent* projB = Scene_Get(game->scene, b, Component_PROJECTILE);
+	HealthComponent* healthA = Scene_Get(game->scene, a, Component_HEALTH);
+	HealthComponent* healthB = Scene_Get(game->scene, b, Component_HEALTH);
+
+	if (projA)
+	{
+		if (healthB) ProjectileHit(healthB, projA);
+		//Partile on projectile death.
+		mat4* transform = Scene_Get(game->scene, a, Component_TRANSFORM);
+		if (transform)
+		{
+			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+			float rot = (float)rand() / (float)RAND_MAX;
+			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
+			p.EndSize = new_vec2_v(1.f);
+			Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
+		}
+		KillChildren(game->scene, a);
+		Scene_DeleteEntity(game->scene, a);
+	}
+	else if (projB)
+	{
+		if (healthA) ProjectileHit(healthA, projB);
+		//Particle on projectile death.
+		mat4* transform = Scene_Get(game->scene, b, Component_TRANSFORM);
+		if (transform)
+		{
+			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+			float rot = (float)rand() / (float)RAND_MAX;
+			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
+			p.EndSize = new_vec2_v(1.f);
+			Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
+		}
+		KillChildren(game->scene, b);
+		Scene_DeleteEntity(game->scene, b);
+	}
 }
 
 void RegisterGameComponents(Scene_t* scene)
