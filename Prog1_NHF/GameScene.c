@@ -4,7 +4,7 @@
 void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* input)
 {
 	//Mouse.
-	ivec2 screenSize;
+	ivec2 screenSize = { 0 };
 	SDL_GetWindowSize(win, &screenSize.x, &screenSize.y);
 	ivec2 mousePos = GetMousePos(snapshot);
 	ivec2 screenCenter = ivec2_Div_s(screenSize, 2);
@@ -109,6 +109,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[EXPLOSION_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Explosion.png"), new_uvec2(96, 96));
 		game->Textures[GROUND_TEX] = TextureAtlas_create(LoadTex2D("Resources\\GroundTiling.png"), new_uvec2(32, 32));
 		game->Textures[SMOKE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Smoke_Fire.png"), new_uvec2(16, 16));
+		game->Textures[BG1_TEX] = TextureAtlas_create(LoadTex2D("Resources\\BG.png"), new_uvec2(550, 367));
 
 		Animation_FromIni("Resources\\BoosterAnim.ini", &game->Animations[BOOSTER_ANIM], &game->Textures[PLAYER_TEX]);
 		Animation_FromIni("Resources\\CannonAnim.ini", &game->Animations[CANNON_ANIM], &game->Textures[PLAYER_TEX]);
@@ -121,19 +122,19 @@ Game* InitGame(Game* game, SDL_Window* window)
 		Animation_FromIni("Resources\\HeavyFireAnim.ini", &game->Animations[HEAVY_FIRE_ANIM], &game->Textures[SMOKE_TEX]);
 
 		//Particle systems.
-		ParticleSystemData boosterData;
+		ParticleSystemData boosterData = { 0 };
 		boosterData.animation = NULL;
 		boosterData.size = new_vec2_v(0.1f);
 		boosterData.z = -0.1f;
 		game->Particles[PARTICLE_BOOSTER] = Particles_New(200u, boosterData);
 
-		ParticleSystemData explosionData;
+		ParticleSystemData explosionData = { 0 };
 		explosionData.animation = &game->Animations[EXPLOSION_ANIM];
 		explosionData.size = new_vec2_v(1.f);
 		explosionData.z = 1.f;
 		game->Particles[PARTICLE_EXPLOSION] = Particles_New(400u, explosionData);
 
-		ParticleSystemData smokeAndFireData;
+		ParticleSystemData smokeAndFireData = { 0 };
 		smokeAndFireData.animation = &game->Animations[LIGHT_SMOKE_ANIM];
 		smokeAndFireData.size = new_vec2_v(0.1f);
 		smokeAndFireData.z = 1.f;
@@ -247,11 +248,11 @@ void UpdateGame(Game* game, float dt)
 
 	//Update.
 	MovePlanes(game, dt);
-	UpdatePlayer(game, &inputstate, dt);
 	UpdateMovement(game->scene, dt);
 	UpdateLifetimes(game->scene);
 	UpdateHealth(game, dt);
 	GameUpdateCamera(game, &inputstate);
+	UpdatePlayer(game, &inputstate, dt);
 	FireCollisionEvents(game->scene);
 
 	//Update particles.
@@ -273,6 +274,7 @@ void RenderGame(Game* game, Renderer2D* renderer)
 
 	//Render scene.
 	RenderSprites(game->scene, renderer);
+	GameRenderBackground(game, renderer);
 
 	//Render particles.
 	for (int i = 0; i < PARTICLESYS_COUNT; i++)
@@ -281,31 +283,6 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	}
 
 	DebugDrawColloiders(game->scene, renderer);
-
-	//Render test background.
-	int w, h;
-	SDL_GetWindowSize(game->window, &w, &h);
-	float aspect = (float)w / (float)h;
-	vec2 camPos = new_vec2_v4(mat4x4_Mul_v(*cam_tr, new_vec4(0.f, 0.f, 0.f, 1.f)));
-	for (float x = camPos.x - aspect * game->constants.viewport_scale; x < camPos.x + aspect * game->constants.viewport_scale; x++)
-	{
-		float x_ = floorf(x / 5.f) * 5.f;
-		Renderer2D_DrawLine(renderer,
-			new_vec3(x_, camPos.y + game->constants.viewport_scale, -1.f),
-			new_vec3(x_, camPos.y - game->constants.viewport_scale, -1.f),
-			new_vec4_v(1.f)
-		);
-	}
-	
-	for (float y = camPos.y - game->constants.viewport_scale; y < camPos.y + game->constants.viewport_scale; y++)
-	{
-		float y_ = floorf(y / 5.f) * 5.f;
-		Renderer2D_DrawLine(renderer,
-			new_vec3(camPos.x + aspect * game->constants.viewport_scale, y_, -1.f),
-			new_vec3(camPos.x - aspect * game->constants.viewport_scale, y_, -1.f),
-			new_vec4_v(1.f)
-		);
-	}
 
 	Renderer2D_EndScene(renderer);
 }
@@ -376,20 +353,28 @@ void GameUpdateCamera(Game* game, InputState* input)
 	int w, h;
 	SDL_GetWindowSize(game->window, &w, &h);
 	float aspect = (float)w / (float)h;
-	float clampDist_h = (game->constants.arena_height - game->constants.viewport_scale) / 2 - 3.f;
-	float clampDist_w = (game->constants.arena_width - aspect * game->constants.viewport_scale) / 2 - 3.f;
+	float clampDist_h = (game->constants.arena_height - 2.f * game->constants.viewport_scale) / 2 + 3.f;
+	float clampDist_w = (game->constants.arena_width - 2.f * aspect * game->constants.viewport_scale) / 2 + 2.f;
 	Pos.y = clamp(-clampDist_h, clampDist_h, Pos.y);
 	Pos.x = clamp(-clampDist_w, clampDist_w, Pos.x);
 
 	*transform = mat4_Translate(mat4x4_Identity(), Pos); //Set transfrom.
-
 }
 
 void GameRenderBackground(Game* game, Renderer2D* renderer)
 {
-	View_t playerView = View_Create(game->scene, 2, Component_PLAYER, Component_TRANSFORM);
-	mat4* transform = View_GetComponent(&playerView, 1);
+	mat4* transform;
+	GetCamera(game->scene, &transform, NULL, NULL);
 	vec3 Pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 
-	
+	const float BG1parallax = -0.05f;
+
+	vec3 BG1Offset = vec3_Add(Pos, vec3_Mul_s(Pos, BG1parallax));
+	BG1Offset.z = -10.f;
+	BG1Offset.y -= game->constants.arena_height * 0.1f;
+	const float BG1Aspect = 367.f / 550.f;
+	const float BG1Width = game->constants.arena_width * 0.15f;
+
+	Renderer2D_DrawRotatedQuad_s(renderer, BG1Offset, new_vec2(BG1Width, BG1Width * BG1Aspect), 0.f, new_vec4_v(0.9f),
+		TextureAtlas_SubTexture(&game->Textures[BG1_TEX], new_uvec2(0, 0), new_uvec2(1, 1)));
 }

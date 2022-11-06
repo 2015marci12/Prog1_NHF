@@ -9,7 +9,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		*/
 
 		//Create buffers.
-		inst->quadVBO = GLBuffer_Create(MAX_QUADS * 4 * sizeof(QuadVertex), GLBufferFlags_STREAM, NULL);
+		inst->quadVBO = GLBuffer_Create(MAX_QUADS * 4 * sizeof(QuadVertex), GLBufferFlags_NONE, NULL);
 		inst->quadIBO = GLBuffer_Create(MAX_QUADS * 6 * sizeof(uint32_t), GLBufferFlags_NONE, NULL);
 
 		//Fill index buffer with the predictable indices.
@@ -111,7 +111,7 @@ Renderer2D* Renderer2D_Init(Renderer2D* inst)
 		* Lines.
 		*/
 
-		inst->lineVBO = GLBuffer_Create(MAX_LINES * 2 * sizeof(LineVertex), GLBufferFlags_STREAM, NULL);
+		inst->lineVBO = GLBuffer_Create(MAX_LINES * 2 * sizeof(LineVertex), GLBufferFlags_NONE, NULL);
 		inst->lineHead = NULL;
 
 		vertexAttribute_t lineAttribs[] =
@@ -221,8 +221,6 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 
 		//Line width.
 		glLineWidth(inst->lineWidth);
-
-		//glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
 		//Quads.
 		if (inst->quadCount)

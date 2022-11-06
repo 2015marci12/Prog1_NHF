@@ -220,7 +220,7 @@ void UpdateHealth(Game* game, float dt)
 
 				//Damage animation.
 				vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-				int damageLevel = (int)floor(health->health / health->max_health * 5.f);
+				int damageLevel = (int)floorf(health->health / health->max_health * 5.f);
 				float rot = RandF_1_Range(0.f, 2.f * PI);
 				float v = RandF_1();
 				vec2 velrand = vec2_Rot(new_vec2(0.f, 0.5f), rot);

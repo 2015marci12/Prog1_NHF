@@ -19,7 +19,6 @@ typedef enum TextureAssets
 	WEAPON_TEX,
 	EXPLOSION_TEX,
 	BG1_TEX,
-	BG2_TEX,
 	GROUND_TEX,
 	SMOKE_TEX,
 
