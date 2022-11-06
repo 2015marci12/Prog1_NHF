@@ -52,7 +52,7 @@ bool SpawnSmoke(Scene_t* scene, entity_t e, const void* d)
 	mat4* transform = Scene_Get(game->scene, e, Component_TRANSFORM);
 	vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 
-	float rot = (float)rand() / (float)RAND_MAX;
+	float rot = RandF_1_Range(0.f, 2.f * PI);
 	Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
 	p.EndSize = new_vec2_v(1.f);
 	Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
