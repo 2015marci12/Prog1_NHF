@@ -65,6 +65,80 @@ void RegisterPlayer(Scene_t* scene)
 	Scene_AddComponentType(scene, playerInfo);
 }
 
+void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc) 
+{
+	entity_t bullet = Scene_CreateEntity(game->scene);
+
+	vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+	vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+	vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+	mat4* bullettransform = Scene_AddComponent(game->scene, bullet, Component_TRANSFORM);
+	*bullettransform = mat4_Translate(*transform, new_vec3(0.6f, 0.f, 0.f));
+
+	Sprite* bulletsprite = Scene_AddComponent(game->scene, bullet, Component_SPRITE);
+	*bulletsprite = Sprite_init();
+	bulletsprite->size = new_vec2(0.3f, 0.3f);
+	bulletsprite->subTex = TextureAtlas_SubTexture(&game->Textures[WEAPON_TEX], new_uvec2(0, 1), new_uvec2(1, 1));
+	bulletsprite->tintColor = new_vec4_v(1.f);
+
+	MovementComponent* bmc = Scene_AddComponent(game->scene, bullet, Component_MOVEMENT);
+	bmc->velocity = vec2_Add(mc->velocity, vec2_Mul_s(direction, game->constants.bullet_velocity));
+	bmc->acceleration = new_vec2_v(0.f);
+
+	LifetimeComponent* lt = Scene_AddComponent(game->scene, bullet, Component_LIFETIME);
+	lt->timer = MakeTimer();
+	lt->lifetime = game->constants.bullet_lifeTime;
+	lt->userdata = game;
+	lt->callback = SpawnSmoke;
+
+	Colloider* bColl = Scene_AddComponent(game->scene, bullet, Component_COLLOIDER);
+	bColl->body = new_Rect(-0.15f, -0.15f, 0.3f, 0.3f);
+	bColl->categoryBits = Layer_Bullets;
+	bColl->maskBits = COLLISIONMASK_BULLET;
+	bColl->groupIndex = FRIENDLY;
+
+	ProjectileComponent* bProj = Scene_AddComponent(game->scene, bullet, Component_PROJECTILE);
+	bProj->damage = game->constants.bullet_damage;
+	bProj->type = BULLET;
+}
+
+void SpawnBomb(Game* game, mat4* transform, MovementComponent* mc) 
+{
+	entity_t bomb = Scene_CreateEntity(game->scene);
+
+	vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+	vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+	vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+	mat4* bombtransform = Scene_AddComponent(game->scene, bomb, Component_TRANSFORM);
+	*bombtransform = mat4_Translate(*transform, new_vec3(0.f, -0.1f, 0.f));
+
+	Sprite* bombsprite = Scene_AddComponent(game->scene, bomb, Component_SPRITE);
+	*bombsprite = Sprite_init();
+	bombsprite->size = new_vec2(0.5f, 0.5f);
+	bombsprite->subTex = TextureAtlas_SubTexture(&game->Textures[WEAPON_TEX], new_uvec2(1, 0), new_uvec2(1, 1));
+	bombsprite->tintColor = new_vec4_v(1.f);
+
+	MovementComponent* bmc = Scene_AddComponent(game->scene, bomb, Component_MOVEMENT);
+	bmc->velocity = mc->velocity;
+	bmc->acceleration = new_vec2(0.f, -2.f * game->constants.g);
+
+	LifetimeComponent* lt = Scene_AddComponent(game->scene, bomb, Component_LIFETIME);
+	lt->timer = MakeTimer();
+	lt->lifetime = 30.f;
+	lt->userdata = game;
+	lt->callback = SpawnSmoke;
+
+	Colloider* bColl = Scene_AddComponent(game->scene, bomb, Component_COLLOIDER);
+	bColl->body = new_Rect(-0.15f, -0.15f, 0.3f, 0.3f);
+	bColl->categoryBits = Layer_Missiles;
+	bColl->maskBits = COLLISIONMASK_BULLET;
+	bColl->groupIndex = FRIENDLY;
+
+	ProjectileComponent* bProj = Scene_AddComponent(game->scene, bomb, Component_PROJECTILE);
+	bProj->damage = game->constants.bullet_damage; //TODO
+	bProj->type = BOMB;
+}
+
 void UpdatePlayer(Game* game, InputState* input, float dt)
 {
 	View_t view = View_Create(game->scene, 5, Component_TRANSFORM, Component_PLAYER, Component_MOVEMENT, Component_SPRITE, Component_PLANE);
@@ -91,6 +165,8 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 	*transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), Pos), angle, new_vec3(0.f, 0.f, 1.f));
 
 	if (mc->velocity.x < 0) *transform = mat4_Scale(*transform, new_vec3(1.f, -1.f, 1.f)); //Invert sprite if the velocity is facing the other way.
+
+	if (input->selectedWeapon != -1) pc->selected_weapon = input->selectedWeapon;
 
 	//scale thrust.
 	float thrust = game->constants.thrust_idle;
@@ -141,43 +217,28 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 		Timer_t timer = { 0 };
 		sprite->overlays[1] = Animation_GetAt(&game->Animations[CANNON_ANIM], GetElapsedSeconds(timer), NULL);
 
-		//Spawn bullet
-		if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time)
+
+		switch (pc->selected_weapon)
 		{
-			pc->shootingTimer = MakeTimer();
-			entity_t bullet = Scene_CreateEntity(game->scene);
-
-			vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-			vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-			vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
-			mat4* bullettransform = Scene_AddComponent(game->scene, bullet, Component_TRANSFORM);
-			*bullettransform = mat4_Translate(*transform, new_vec3(0.6f, 0.f, 0.f));
-
-			Sprite* bulletsprite = Scene_AddComponent(game->scene, bullet, Component_SPRITE);
-			*bulletsprite = Sprite_init();
-			bulletsprite->size = new_vec2(0.3f, 0.3f);
-			bulletsprite->subTex = TextureAtlas_SubTexture(&game->Textures[WEAPON_TEX], new_uvec2(0, 1), new_uvec2(1, 1));
-			bulletsprite->tintColor = new_vec4_v(1.f);
-
-			MovementComponent* bmc = Scene_AddComponent(game->scene, bullet, Component_MOVEMENT);
-			bmc->velocity = vec2_Add(mc->velocity, vec2_Mul_s(direction, game->constants.bullet_velocity));
-			bmc->acceleration = new_vec2_v(0.f);
-
-			LifetimeComponent* lt = Scene_AddComponent(game->scene, bullet, Component_LIFETIME);
-			lt->timer = MakeTimer();
-			lt->lifetime = game->constants.bullet_lifeTime;
-			lt->userdata = game;
-			lt->callback = SpawnSmoke;
-
-			Colloider* bColl = Scene_AddComponent(game->scene, bullet, Component_COLLOIDER);
-			bColl->body = new_Rect(-0.15f, -0.15f, 0.3f, 0.3f);
-			bColl->categoryBits = Layer_Bullets;
-			bColl->maskBits = COLLISIONMASK_BULLET;
-			bColl->groupIndex = FRIENDLY;
-
-			ProjectileComponent* bProj = Scene_AddComponent(game->scene, bullet, Component_PROJECTILE);
-			bProj->damage = game->constants.bullet_damage;
+		case 0:
+			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time)
+			{
+				pc->shootingTimer = MakeTimer();
+				SpawnBullet(game, transform, mc);
+			}
+			break;
+		case 1: break;
+		case 2:
+			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time) //TODO
+			{
+				pc->shootingTimer = MakeTimer();
+				SpawnBomb(game, transform, mc);
+			}
+			break;
+		default:
+			break;
 		}
+		
 	}
 	else
 	{
@@ -270,6 +331,31 @@ void ProjectileHit(HealthComponent* health, ProjectileComponent* proj)
 	}
 }
 
+void SpawnProjectileParticle(Game* game, mat4* transform, ProjectileType type) 
+{
+	if (type == BULLET) 
+	{
+		if (transform)
+		{
+			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+			float rot = (float)rand() / (float)RAND_MAX;
+			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
+			p.EndSize = new_vec2_v(1.f);
+			Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
+		}
+	}
+	else 
+	{
+		if (transform)
+		{
+			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+			float rot = (float)rand() / (float)RAND_MAX;
+			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(2.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
+			Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
+		}
+	}
+}
+
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 {
 	ProjectileComponent* projA = Scene_Get(game->scene, a, Component_PROJECTILE);
@@ -282,14 +368,7 @@ void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 		if (healthB) ProjectileHit(healthB, projA);
 		//Partile on projectile death.
 		mat4* transform = Scene_Get(game->scene, a, Component_TRANSFORM);
-		if (transform)
-		{
-			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-			float rot = (float)rand() / (float)RAND_MAX;
-			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
-			p.EndSize = new_vec2_v(1.f);
-			Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
-		}
+		SpawnProjectileParticle(game, transform, projA->type);
 		KillChildren(game->scene, a);
 		Scene_DeleteEntity(game->scene, a);
 	}
@@ -298,14 +377,7 @@ void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 		if (healthA) ProjectileHit(healthA, projB);
 		//Particle on projectile death.
 		mat4* transform = Scene_Get(game->scene, b, Component_TRANSFORM);
-		if (transform)
-		{
-			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-			float rot = (float)rand() / (float)RAND_MAX;
-			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
-			p.EndSize = new_vec2_v(1.f);
-			Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
-		}
+		SpawnProjectileParticle(game, transform, projB->type);
 		KillChildren(game->scene, b);
 		Scene_DeleteEntity(game->scene, b);
 	}

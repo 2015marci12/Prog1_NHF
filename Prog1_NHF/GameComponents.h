@@ -20,6 +20,7 @@ typedef struct PlayerComponent
 	float max_fuel;
 	Timer_t boosterParticleTimer;
 	Timer_t shootingTimer;
+	int selected_weapon;
 } PlayerComponent;
 
 void RegisterPlayer(Scene_t* scene);
@@ -37,9 +38,18 @@ typedef struct HealthComponent
 void RegisterHealth(Scene_t* scene);
 void UpdateHealth(Game* game, float dt);
 
+typedef enum ProjectileType 
+{
+	BULLET,
+	MISSILE,
+	BOMB,
+} ProjectileType;
+
 typedef struct ProjectileComponent
 {
 	float damage;
+	ProjectileType type;
+
 } ProjectileComponent;
 
 void RegisterProjectile(Scene_t* scene);

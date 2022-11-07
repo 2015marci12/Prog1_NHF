@@ -179,6 +179,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 
 		pc->shootingTimer = MakeTimer();
 		pc->boosterParticleTimer = MakeTimer();
+		pc->selected_weapon = 0;
 
 		pcoll->body = new_Rect(-0.5f, -0.2f, 1.f, 0.4f);
 		pcoll->categoryBits = Layer_Player;
