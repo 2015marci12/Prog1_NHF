@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Animation.c" />
+    <ClCompile Include="BitmapFont.c" />
     <ClCompile Include="Components.c" />
     <ClCompile Include="Container.c" />
     <ClCompile Include="DiffConfig.c" />
@@ -39,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animation.h" />
+    <ClInclude Include="BitmapFont.h" />
     <ClInclude Include="Components.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />

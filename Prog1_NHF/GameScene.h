@@ -10,6 +10,7 @@
 #include "ParticleSystem.h"
 #include "Components.h"
 #include "DiffConfig.h"
+#include "BitmapFont.h"
 
 #include <SDL2/SDL.h>
 
@@ -21,6 +22,7 @@ typedef enum TextureAssets
 	BG1_TEX,
 	GROUND_TEX,
 	SMOKE_TEX,
+	FONT_TEX,
 
 	TEX_COUNT,
 } TextureAssets;
@@ -90,6 +92,8 @@ typedef struct Game
 	uint64_t score;
 	Scene_t* scene;
 	SDL_Window* window;
+
+	BitmapFont* font;
 
 	TextureAtlas Textures[TEX_COUNT];
 	Animation Animations[ANIM_COUNT];

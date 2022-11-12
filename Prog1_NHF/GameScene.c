@@ -110,6 +110,10 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[GROUND_TEX] = TextureAtlas_create(LoadTex2D("Resources\\GroundTiling.png"), new_uvec2(32, 32));
 		game->Textures[SMOKE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Smoke_Fire.png"), new_uvec2(16, 16));
 		game->Textures[BG1_TEX] = TextureAtlas_create(LoadTex2D("Resources\\BG.png"), new_uvec2(550, 367));
+		game->Textures[FONT_TEX] = TextureAtlas_create(LoadTex2D("Resources\\charmap-futuristic_transparent.png"), new_uvec2(5, 8));
+
+		//Load font.
+		game->font = LoadBitmapFont("Resources\\@Malgun Gothic.bff", true);
 
 		Animation_FromIni("Resources\\BoosterAnim.ini", &game->Animations[BOOSTER_ANIM], &game->Textures[PLAYER_TEX]);
 		Animation_FromIni("Resources\\CannonAnim.ini", &game->Animations[CANNON_ANIM], &game->Textures[PLAYER_TEX]);
@@ -223,6 +227,8 @@ void CleanupGame(Game* game)
 	if (!game) return;
 	Scene_Delete(game->scene);
 
+	DeleteBitmapFont(game->font);
+
 	for (int i = 0; i < TEX_COUNT; i++)
 	{
 		if (game->Textures[i].texture) GLTexture_Destroy(game->Textures[i].texture);
@@ -284,6 +290,7 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	}
 
 	DebugDrawColloiders(game->scene, renderer);
+	Renderer2D_DrawText(renderer, new_vec3(0.f, 0.f, 100.f), game->font, 1.f, new_vec4_v(1.f), "Hello,\n world!");
 
 	Renderer2D_EndScene(renderer);
 }

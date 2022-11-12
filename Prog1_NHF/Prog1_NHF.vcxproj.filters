@@ -66,6 +66,9 @@
     <ClCompile Include="GameComponents.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BitmapFont.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -129,6 +132,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GameComponents.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BitmapFont.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

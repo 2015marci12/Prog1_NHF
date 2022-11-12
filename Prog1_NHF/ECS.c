@@ -59,9 +59,9 @@ size_t SparseMap_Emplace(SparseMap_t* ptr, entity_t entity)
 		ptr->sparse_size = newSize;
 	}
 	ptr->sparse[entity] = (entity_t)ptr->dense_size;
-	if (ptr->dense_size >= ptr->dense_capacity) //Realloc dense if needed.
+	if (!(ptr->dense_size < ptr->dense_capacity)) //Realloc dense if needed.
 	{
-		size_t newCap = max(ptr->dense_capacity * 2, 32);
+		size_t newCap = max(ptr->dense_size * 2, 32);
 		ptr->dense = (entity_t*)realloc(ptr->dense, newCap * sizeof(entity_t));
 		memset(ptr->dense + ptr->dense_capacity, -1, (newCap - ptr->dense_capacity) * sizeof(entity_t));
 		ptr->dense_capacity = newCap;

@@ -209,7 +209,7 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 		inst->lineHead = NULL;
 		GLBuffer_EndWriteRange(inst->lineVBO);
 		inst->quadHead = NULL;
-		GLBuffer_EndWriteRange(inst->quadVBO);		
+		GLBuffer_EndWriteRange(inst->quadVBO);
 
 		//Setup render state.
 
@@ -243,7 +243,7 @@ void Renderer2D_EndBatch(Renderer2D* inst)
 		}
 
 		//Lines.
-		if (inst->lineCount) 
+		if (inst->lineCount)
 		{
 			//Bind objects.
 			GLShader_Bind(inst->lineShader);
@@ -267,13 +267,13 @@ int Renderer2D_AddTexture(Renderer2D* inst, GLTexture* tex)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
 	if (!tex) return 0; //0th texture is always the white one.
-	//Find the texture if it is already submitted.	
+	//Find the texture if it is already submitted.
 	for (int i = 0; i < (int)inst->texCount; i++)
 	{
 		if (inst->textures[i] == tex) return i;
 	}
 	//Texture not found. check if we can add it to the array.
-	if (inst->texCount < MAX_TEXTURES) 
+	if (inst->texCount < MAX_TEXTURES)
 	{
 		inst->textures[inst->texCount] = tex;
 		return inst->texCount++;
@@ -345,6 +345,11 @@ void Renderer2D_DrawQuad(Renderer2D* inst, vec3 pos, vec2 size, vec4 color, GLTe
 		inst->quadHead++;
 	}
 	inst->quadCount++;
+}
+
+void Renderer2D_DrawQuad_s(Renderer2D* inst, vec3 pos, vec2 size, vec4 color, SubTexture subtex)
+{
+	Renderer2D_DrawQuad(inst, pos, size, color, subtex.texture, subtex.texRect);
 }
 
 void Renderer2D_DrawRotatedQuad(Renderer2D* inst, vec3 pos, vec2 size, float rotation, vec4 color, GLTexture* texture, Rect texrect)
@@ -457,7 +462,7 @@ void Renderer2D_DrawRect(Renderer2D* inst, Rect rect, float z, vec4 color)
 		new_vec2(rect.x, rect.y + rect.h),
 	};
 
-	for(int i = 0; i < 4; i++) 
+	for (int i = 0; i < 4; i++)
 	{
 		Renderer2D_DrawLine(inst, new_vec3_v2(points[i], z), new_vec3_v2(points[(i + 1) % 4], z), color);
 	}
@@ -477,5 +482,28 @@ void Renderer2D_DrawRect_t(Renderer2D* inst, mat4 transform, Rect rect, float z,
 	for (int i = 0; i < 4; i++)
 	{
 		Renderer2D_DrawLine(inst, new_vec3_v4(points[i]), new_vec3_v4(points[(i + 1) % 4]), color);
+	}
+}
+
+void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fontSize, vec4 color, const char* text)
+{
+	vec3 offset = pos;
+	char* str = text;
+	while (*str)
+	{
+		if (*str == '\n')
+		{
+			offset.y -= fontSize * 1.1f;
+			offset.x = pos.x;
+		}
+		else
+		{
+			vec2 size;
+			float advance;
+			SubTexture tex = FontGetChar(font, fontSize, *str, &size, &advance);
+			Renderer2D_DrawQuad_s(inst, offset, size, color, tex);
+			offset.x += advance;
+		}
+		str++;
 	}
 }
