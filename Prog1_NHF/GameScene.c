@@ -290,7 +290,7 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	}
 
 	DebugDrawColloiders(game->scene, renderer);
-	Renderer2D_DrawText(renderer, new_vec3(0.f, 0.f, 100.f), game->font, 1.f, new_vec4_v(1.f), "Hello,\n world!");
+	Renderer2D_DrawText(renderer, new_vec3(0.f, 0.f, 100.f), game->font, 1.f, new_vec4_v(1.f), "Hello,\nworld!");
 
 	Renderer2D_EndScene(renderer);
 }
