@@ -3,7 +3,7 @@
 PoolBlock_t* Pool_newBlock(size_t elem_size, size_t count, FreeListNode_t** freelist)
 {
 	size_t totalSize = elem_size * count;
-	PoolBlock_t* block = malloc(sizeof(PoolBlock_t) * totalSize);
+	PoolBlock_t* block = malloc(sizeof(PoolBlock_t) + totalSize);
 	if (!block) return NULL; //Out of memory.
 	block->size = totalSize;
 	block->next = NULL;

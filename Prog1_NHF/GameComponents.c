@@ -65,7 +65,7 @@ void RegisterPlayer(Scene_t* scene)
 	Scene_AddComponentType(scene, playerInfo);
 }
 
-void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc) 
+void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc)
 {
 	entity_t bullet = Scene_CreateEntity(game->scene);
 
@@ -102,7 +102,7 @@ void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc)
 	bProj->type = BULLET;
 }
 
-void SpawnBomb(Game* game, mat4* transform, MovementComponent* mc) 
+void SpawnBomb(Game* game, mat4* transform, MovementComponent* mc)
 {
 	entity_t bomb = Scene_CreateEntity(game->scene);
 
@@ -217,7 +217,6 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 		Timer_t timer = { 0 };
 		sprite->overlays[1] = Animation_GetAt(&game->Animations[CANNON_ANIM], GetElapsedSeconds(timer), NULL);
 
-
 		switch (pc->selected_weapon)
 		{
 		case 0:
@@ -238,7 +237,6 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 		default:
 			break;
 		}
-		
 	}
 	else
 	{
@@ -316,6 +314,35 @@ void UpdateHealth(Game* game, float dt)
 	}
 }
 
+void RegisterGunAIs(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_GunTurretAI, GunTurretAI);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
+{
+	mat4 PlayerTransform = *(mat4*)Scene_Get(game->scene, player, Component_TRANSFORM);
+	MovementComponent PlayerMovement = *(MovementComponent*)Scene_Get(game->scene, player, Component_MOVEMENT);
+
+	vec2 PlayerPos = new_vec2_v4(mat4x4_Mul_v(PlayerTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+
+	for (View_t v = View_Create(game->scene, 3, Component_TRANSFORM, Component_SPRITE, Component_GunTurretAI);
+		!View_End(&v); View_Next(&v))
+	{
+		mat4* Transform = View_GetComponent(&v, 0);
+		Sprite* Sprite = View_GetComponent(&v, 1);
+		GunTurretAI* AI = View_GetComponent(&v, 2);
+
+		mat4 WorldTransform = CalcWorldTransform(game->scene, View_GetCurrent(&v));
+		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(WorldTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 Dir = new_vec2_v4(mat4x4_Mul_v(WorldTransform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+		Dir = vec2_Sub(Dir, Pos);
+		vec2 Diff = vec2_Sub(PlayerPos, Pos);
+		//TODO
+	}
+}
+
 void RegisterProjectile(Scene_t* scene)
 {
 	ComponentInfo_t cinf = COMPONENT_DEF(Component_PROJECTILE, ProjectileComponent);
@@ -331,9 +358,9 @@ void ProjectileHit(HealthComponent* health, ProjectileComponent* proj)
 	}
 }
 
-void SpawnProjectileParticle(Game* game, mat4* transform, ProjectileType type) 
+void SpawnProjectileParticle(Game* game, mat4* transform, ProjectileType type)
 {
-	if (type == BULLET) 
+	if (type == BULLET)
 	{
 		if (transform)
 		{
@@ -344,7 +371,7 @@ void SpawnProjectileParticle(Game* game, mat4* transform, ProjectileType type)
 			Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
 		}
 	}
-	else 
+	else
 	{
 		if (transform)
 		{
@@ -389,4 +416,5 @@ void RegisterGameComponents(Scene_t* scene)
 	RegisterPlayer(scene);
 	RegisterHealth(scene);
 	RegisterProjectile(scene);
+	RegisterGunAIs(scene);
 }

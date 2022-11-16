@@ -18,10 +18,13 @@ enum ComponentTypes
 	Component_MOVEMENT, //moves according to the predefined characteristics.
 	Component_LIFETIME, //destroys the entity after some time and calls the callback beforehand.
 	Component_PHYSICS, //Physics
+
 	Component_PLAYER,
 	Component_PLANE,
 	Component_HEALTH,
 	Component_PROJECTILE,
+
+	Component_GunTurretAI,
 };
 
 /*

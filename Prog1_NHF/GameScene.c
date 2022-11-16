@@ -110,7 +110,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[GROUND_TEX] = TextureAtlas_create(LoadTex2D("Resources\\GroundTiling.png"), new_uvec2(32, 32));
 		game->Textures[SMOKE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Smoke_Fire.png"), new_uvec2(16, 16));
 		game->Textures[BG1_TEX] = TextureAtlas_create(LoadTex2D("Resources\\BG.png"), new_uvec2(550, 367));
-		game->Textures[FONT_TEX] = TextureAtlas_create(LoadTex2D("Resources\\charmap-futuristic_transparent.png"), new_uvec2(5, 8));
+		//game->Textures[FONT_TEX] = TextureAtlas_create(LoadTex2D("Resources\\charmap-futuristic_transparent.png"), new_uvec2(5, 8));
 
 		//Load font.
 		game->font = LoadBitmapFont("Resources\\@Malgun Gothic.bff", true);

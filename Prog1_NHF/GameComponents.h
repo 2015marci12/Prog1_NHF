@@ -52,6 +52,46 @@ typedef struct ProjectileComponent
 
 } ProjectileComponent;
 
+typedef enum TankState 
+{
+	Tank_IDLE,
+	Tank_ATTACKING,
+	Tank_FLEEING,
+} TankState;
+
+typedef struct TankHullAI
+{
+	TankState state;
+	bool IsMissleTruck;
+} TankHullAI;
+
+typedef struct GunTurretAI 
+{
+	Timer_t reloadTimer;
+} GunTurretAI;
+
+void RegisterGunAIs(Scene_t* scene);
+void UpdateGunTurretAIs(Game* game, float dt, entity_t player);
+
+typedef struct MissileLauncherAI 
+{
+	Timer_t realoadTimer;
+} MissileLauncherAI;
+
+typedef enum FighterState 
+{
+	Fighter_IDLE,
+	Fighter_ATTACKING,
+	Fighter_FLEEING,
+} FighterState;
+
+typedef struct FighterAI 
+{
+	FighterState state;
+	Timer_t reloadTimer;
+	int burstCounter;
+} FighterAI;
+
 void RegisterProjectile(Scene_t* scene);
 
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
