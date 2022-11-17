@@ -416,7 +416,7 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 		
 		vec2 Diff = vec2_Sub(PlayerPos, Pos);
 
-		if (vec2_Len(Diff) > (game->constants.bullet_velocity * game->constants.bullet_lifeTime * 0.6f)) return;
+		if (vec2_Len(Diff) > (game->constants.bullet_velocity * game->constants.bullet_lifeTime * 0.6f)) continue;
 
 		//Calculate firing solution.
 		float a = vec2_Dot(PlayerMovement.velocity, PlayerMovement.velocity) - (game->constants.bullet_velocity * game->constants.bullet_velocity);

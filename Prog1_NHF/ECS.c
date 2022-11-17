@@ -80,8 +80,8 @@ size_t SparseMap_Remove(SparseMap_t* ptr, entity_t entity)
 	entity_t end = ptr->dense[ptr->dense_size - 1];
 
 	ptr->sparse[end] = (entity_t)pos;
-	ptr->dense[pos] = end;
 	ptr->sparse[entity] = UINT32_MAX;
+	ptr->dense[pos] = end;
 
 	ptr->dense[ptr->dense_size - 1] = UINT32_MAX;
 	ptr->dense_size--;

@@ -223,6 +223,8 @@ Game* InitGame(Game* game, SDL_Window* window)
 		SetupWalls(game);
 
 		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, false);
+		SpawnGunTurret(game, new_vec2(-10.f, -game->constants.arena_height * 0.5f + 0.5f), false);
+		SpawnGunTurret(game, new_vec2(5.f, game->constants.arena_height * 0.5f - 0.5f), true);
 	}
 	return game;
 }
