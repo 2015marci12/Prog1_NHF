@@ -20,6 +20,7 @@ typedef struct SubTexture
 TextureAtlas TextureAtlas_create(GLTexture* tex, uvec2 unit);
 SubTexture TextureAtlas_SubTexture(TextureAtlas* atlas, uvec2 tile, uvec2 size);
 SubTexture SubTexture_empty();
+SubTexture SubTexture_Flip(SubTexture tex, bool x, bool y);
 
 #define MAX_ANIMATION_FRAMES 32
 

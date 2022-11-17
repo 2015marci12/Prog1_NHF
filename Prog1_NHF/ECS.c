@@ -38,7 +38,7 @@ bool SparseMap_Contains(SparseMap_t* ptr, entity_t entity)
 {
 	ASSERT(ptr, "SparseMap_Contains does not permit ptr to be NULL!");
 	ASSERT(entity != -1, "SparseMap_Contains does not permit entity to be invalid (-1)!");
-	return (entity < ptr->sparse_size) && (ptr->sparse[entity] != -1);
+	return (entity < ptr->sparse_size) && (ptr->sparse[entity] != UINT32_MAX);
 }
 
 size_t SparseMap_Index(SparseMap_t* ptr, entity_t entity)
@@ -81,7 +81,7 @@ size_t SparseMap_Remove(SparseMap_t* ptr, entity_t entity)
 
 	ptr->sparse[end] = (entity_t)pos;
 	ptr->dense[pos] = end;
-	ASSERT(&ptr->dense[pos] >= ptr->dense, "!!!!");
+	ptr->sparse[entity] = UINT32_MAX;
 
 	ptr->dense[ptr->dense_size - 1] = UINT32_MAX;
 	ptr->dense_size--;
@@ -369,7 +369,7 @@ bool Scene_Has(Scene_t* ptr, entity_t entity, componentid_t cid)
 void* Scene_Get(Scene_t* ptr, entity_t entity, componentid_t cid)
 {
 	ASSERT(ptr, "Scene_Get does not permit ptr to be NULL");
-	ASSERT(Scene_EntityValid(ptr, entity), "Scene_Get: entity must be valid!");
+	if (!Scene_EntityValid(ptr, entity)) return NULL;
 	ComponentStorage_t* storage = Scene_GetStorage(ptr, cid);
 	return storage ? ComponentStorage_Get(storage, entity) : NULL;
 }

@@ -166,5 +166,8 @@
     <None Include="Resources\LightSmokeAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="RadarAnim.ini">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

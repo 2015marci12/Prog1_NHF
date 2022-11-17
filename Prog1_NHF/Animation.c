@@ -34,6 +34,21 @@ SubTexture SubTexture_empty()
 	return ret;
 }
 
+SubTexture SubTexture_Flip(SubTexture tex, bool x, bool y)
+{
+	if (x) 
+	{
+		tex.texRect.x += tex.texRect.w;
+		tex.texRect.w *= -1.f;
+	}
+	if (y)
+	{
+		tex.texRect.y += tex.texRect.h;
+		tex.texRect.h *= -1.f;
+	}
+	return tex;
+}
+
 SubTexture Animation_GetAt(Animation* animation, float time, float* overtime)
 {
 	if (animation && animation->frameCount)

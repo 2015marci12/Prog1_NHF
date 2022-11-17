@@ -31,7 +31,7 @@ void SpawnFloorCeilingTile(Game* game, float scale, float x)
 	mat4* transform = Scene_AddComponent(game->scene, floor, Component_TRANSFORM);
 	Sprite* sprite = Scene_AddComponent(game->scene, floor, Component_SPRITE);
 
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(x, -game->constants.arena_height / 2, 0.f));
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(x, -game->constants.arena_height / 2 - scale * 1.f, 0.f));
 	*sprite = Sprite_init();
 	sprite->size = new_vec2(scale, scale * 2.f);
 	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[GROUND_TEX], new_uvec2(1, 1), new_uvec2(1, 2));
@@ -41,7 +41,7 @@ void SpawnFloorCeilingTile(Game* game, float scale, float x)
 	transform = Scene_AddComponent(game->scene, ceiling, Component_TRANSFORM);
 	sprite = Scene_AddComponent(game->scene, ceiling, Component_SPRITE);
 
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(x, game->constants.arena_height / 2 + scale * 0.5f, 0.f));
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(x, game->constants.arena_height / 2 + scale * 1.5f, 0.f));
 	*sprite = Sprite_init();
 	sprite->size = new_vec2(scale, scale * 3.f);
 	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[GROUND_TEX], new_uvec2(0, 0), new_uvec2(1, 3));
@@ -61,7 +61,7 @@ void SetupWalls(Game* game)
 	Colloider* colloider = Scene_AddComponent(game->scene, floor, Component_COLLOIDER);
 	PhysicsComponent* physics = Scene_AddComponent(game->scene, floor, Component_PHYSICS);
 
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, -game->constants.arena_height / 2, 0.f));
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, -game->constants.arena_height / 2 - scale, 0.f));
 
 	colloider->body = new_Rect(-game->constants.arena_width / 2, -scale, game->constants.arena_width, scale * 2.f);
 	colloider->maskBits = COLLISIONMASK_WALL;
@@ -78,7 +78,7 @@ void SetupWalls(Game* game)
 	colloider = Scene_AddComponent(game->scene, ceiling, Component_COLLOIDER);
 	physics = Scene_AddComponent(game->scene, ceiling, Component_PHYSICS);
 
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, game->constants.arena_height / 2, 0.f));
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, game->constants.arena_height / 2 + scale * 1.f, 0.f));
 
 	colloider->body = new_Rect(-game->constants.arena_width / 2, -scale, game->constants.arena_width, scale * 2.f);
 	colloider->maskBits = COLLISIONMASK_WALL;
@@ -110,7 +110,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[GROUND_TEX] = TextureAtlas_create(LoadTex2D("Resources\\GroundTiling.png"), new_uvec2(32, 32));
 		game->Textures[SMOKE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Smoke_Fire.png"), new_uvec2(16, 16));
 		game->Textures[BG1_TEX] = TextureAtlas_create(LoadTex2D("Resources\\BG.png"), new_uvec2(550, 367));
-		//game->Textures[FONT_TEX] = TextureAtlas_create(LoadTex2D("Resources\\charmap-futuristic_transparent.png"), new_uvec2(5, 8));
+		game->Textures[ENEMIES_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Enemies.png"), new_uvec2(32, 16));
 
 		//Load font.
 		game->font = LoadBitmapFont("Resources\\@Malgun Gothic.bff", true);
@@ -119,6 +119,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		Animation_FromIni("Resources\\CannonAnim.ini", &game->Animations[CANNON_ANIM], &game->Textures[PLAYER_TEX]);
 		Animation_FromIni("Resources\\MissileAnim.ini", &game->Animations[MISSILE_ANIM], &game->Textures[WEAPON_TEX]);
 		Animation_FromIni("Resources\\ExplosionAnim.ini", &game->Animations[EXPLOSION_ANIM], &game->Textures[EXPLOSION_TEX]);
+		Animation_FromIni("Resources\\RadarAnim.ini", &game->Animations[RADAR_ANIM], &game->Textures[ENEMIES_TEX]);
 
 		Animation_FromIni("Resources\\LightSmokeAnim.ini", &game->Animations[LIGHT_SMOKE_ANIM], &game->Textures[SMOKE_TEX]);
 		Animation_FromIni("Resources\\HeavySmokeAnim.ini", &game->Animations[HEAVY_SMOKE_ANIM], &game->Textures[SMOKE_TEX]);
@@ -196,8 +197,10 @@ Game* InitGame(Game* game, SDL_Window* window)
 
 		phealth->health = game->constants.player_health;
 		phealth->max_health = game->constants.player_health;
-		phealth->invincibility_time = 0.f;
+		phealth->invincibility_time = 0.2f;
 		phealth->lastParticle = MakeTimer();
+		phealth->lastHit = MakeTimer();
+		phealth->score = 0;
 
 		//Camera
 		int w, h;
@@ -218,6 +221,8 @@ Game* InitGame(Game* game, SDL_Window* window)
 
 		//Walls
 		SetupWalls(game);
+
+		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, false);
 	}
 	return game;
 }
@@ -254,13 +259,20 @@ void UpdateGame(Game* game, float dt)
 	GameParseInput(game->window, &snapshot, &inputstate);
 
 	//Update.
-	MovePlanes(game, dt);
-	UpdateMovement(game->scene, dt);
-	UpdateLifetimes(game->scene);
-	UpdateHealth(game, dt);
-	GameUpdateCamera(game, &inputstate);
-	UpdatePlayer(game, &inputstate, dt);
-	FireCollisionEvents(game->scene);
+	View_t v = View_Create(game->scene, 1, Component_PLAYER);//TODO game over
+	if (!View_End(&v))
+	{
+		UpdateTankAIs(game, dt, View_GetCurrent(&v));
+		UpdateGunTurretAIs(game, dt, View_GetCurrent(&v));
+		MovePlanes(game, dt);
+		UpdateMovement(game->scene, dt);
+
+		UpdateLifetimes(game->scene);
+		GameUpdateCamera(game, &inputstate);
+		UpdatePlayer(game, &inputstate, dt);
+		FireCollisionEvents(game->scene);
+		UpdateHealth(game, dt);
+	}
 
 	//Update particles.
 	for (int i = 0; i < PARTICLESYS_COUNT; i++)

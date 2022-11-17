@@ -65,7 +65,7 @@ void RegisterPlayer(Scene_t* scene)
 	Scene_AddComponentType(scene, playerInfo);
 }
 
-void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc)
+void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc, int32_t group, float vel, float damage)
 {
 	entity_t bullet = Scene_CreateEntity(game->scene);
 
@@ -82,7 +82,7 @@ void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc)
 	bulletsprite->tintColor = new_vec4_v(1.f);
 
 	MovementComponent* bmc = Scene_AddComponent(game->scene, bullet, Component_MOVEMENT);
-	bmc->velocity = vec2_Add(mc->velocity, vec2_Mul_s(direction, game->constants.bullet_velocity));
+	bmc->velocity = vec2_Mul_s(direction, vel);
 	bmc->acceleration = new_vec2_v(0.f);
 
 	LifetimeComponent* lt = Scene_AddComponent(game->scene, bullet, Component_LIFETIME);
@@ -95,10 +95,10 @@ void SpawnBullet(Game* game, mat4* transform, MovementComponent* mc)
 	bColl->body = new_Rect(-0.15f, -0.15f, 0.3f, 0.3f);
 	bColl->categoryBits = Layer_Bullets;
 	bColl->maskBits = COLLISIONMASK_BULLET;
-	bColl->groupIndex = FRIENDLY;
+	bColl->groupIndex = group;
 
 	ProjectileComponent* bProj = Scene_AddComponent(game->scene, bullet, Component_PROJECTILE);
-	bProj->damage = game->constants.bullet_damage;
+	bProj->damage = damage;
 	bProj->type = BULLET;
 }
 
@@ -223,7 +223,7 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time)
 			{
 				pc->shootingTimer = MakeTimer();
-				SpawnBullet(game, transform, mc);
+				SpawnBullet(game, transform, mc, FRIENDLY, game->constants.bullet_velocity, game->constants.bullet_damage);
 			}
 			break;
 		case 1: break;
@@ -267,6 +267,7 @@ void UpdateHealth(Game* game, float dt)
 				Particle p = MakeParticle_s(Pos, 0.f, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
 				Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
 			}
+			game->score += health->score;
 			KillChildren(game->scene, View_GetCurrent(&v));
 			View_DestroyCurrent_FindNext(&v);
 		}
@@ -309,8 +310,82 @@ void UpdateHealth(Game* game, float dt)
 					break;
 				}
 			}
+
+			//Invincibility animation.
+			Sprite* sprite = Scene_Get(game->scene, View_GetCurrent(&v), Component_SPRITE);
+			if (sprite && (GetElapsedSeconds(health->lastHit) < health->invincibility_time)) 
+			{
+				float alpha = health->invincibility_time / GetElapsedSeconds(health->lastHit) + 1.f;
+				sprite->tintColor = new_vec4_v(alpha);
+				sprite->tintColor.a = 1.f;
+			}
+			else if(sprite)
+			{
+				sprite->tintColor = new_vec4_v(1.f);
+			}
 			View_Next(&v);
 		}
+	}
+}
+
+void RegisterTankAIs(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_TankAI, TankHullAI);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateTankAIs(Game* game, float dt, entity_t player)
+{
+	mat4 PlayerTransform = *(mat4*)Scene_Get(game->scene, player, Component_TRANSFORM);
+
+	vec2 PlayerPos = new_vec2_v4(mat4x4_Mul_v(PlayerTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+	for (View_t v = View_Create(game->scene, 4, Component_TRANSFORM, Component_MOVEMENT, Component_SPRITE, Component_TankAI);
+		!View_End(&v); View_Next(&v))
+	{
+		mat4* Transform = View_GetComponent(&v, 0);
+		MovementComponent* Movement = View_GetComponent(&v, 1);
+		Sprite* Sprite = View_GetComponent(&v, 2);
+		TankHullAI* AI = View_GetComponent(&v, 3);
+
+		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 Diff = vec2_Sub(PlayerPos, Pos);
+
+		//Movement towards player.
+		if (vec2_Len(Diff) > 20.f) 
+		{
+			Movement->velocity = new_vec2_v(0.f);
+		}
+		else 
+		{
+			Movement->velocity = new_vec2(clamp(-1.f, 1.f, Diff.x) * 2.f, 0.f);
+		}
+
+		//Animation
+		if (AI->IsMissleTruck) 
+		{
+			Sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 5), new_uvec2(1, 1));
+		}
+		else 
+		{
+			entity_t turretChild = FirstChild(game->scene, View_GetCurrent(&v));
+			mat4* TurretTransform = Scene_Get(game->scene, turretChild, Component_TRANSFORM);
+
+			vec2 Pos2 = new_vec2_v4(mat4x4_Mul_v(*TurretTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+			vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*TurretTransform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+			Dir = vec2_Sub(Dir, Pos2);
+
+
+			SubTexture directions[2] =
+			{
+				TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 7), new_uvec2(1, 1)),
+				TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(1, 7), new_uvec2(1, 1))
+			};
+
+			Sprite->subTex = directions[((Dir.x <= 0.f) ^ (Diff.x <= 0.f)) ? 1 : 0];
+			
+		}
+
+		Sprite->subTex = SubTexture_Flip(Sprite->subTex, (Diff.x <= 0.f), false);	
 	}
 }
 
@@ -338,8 +413,50 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(WorldTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 		vec2 Dir = new_vec2_v4(mat4x4_Mul_v(WorldTransform, new_vec4(1.f, 0.f, 0.f, 1.f)));
 		Dir = vec2_Sub(Dir, Pos);
+		
 		vec2 Diff = vec2_Sub(PlayerPos, Pos);
-		//TODO
+
+		if (vec2_Len(Diff) > (game->constants.bullet_velocity * game->constants.bullet_lifeTime * 0.6f)) return;
+
+		//Calculate firing solution.
+		float a = vec2_Dot(PlayerMovement.velocity, PlayerMovement.velocity) - (game->constants.bullet_velocity * game->constants.bullet_velocity);
+		float b = vec2_Dot(PlayerMovement.velocity, Diff) * 2.f;
+		float c = vec2_Dot(Diff, Diff);
+
+		//Quadratic formula.
+		float p = -b / (2.f * a); 
+		float q = sqrtf((b * b) - 4 * a * c) / (2.f * a);
+		float t1 = p - q;
+		float t2 = p + q;
+		float t;
+
+		//Pick the better solution (sorter fligt time)
+		if (t1 > t2 && t2 > 0) t = t2;
+		else t = t1;
+
+		//Randomize shot because otherwise the thing is too accurate :)
+		float randomMisAim = RandF_1_Range(-0.5f, 0.5f);
+		//scale randomness with distance.
+		randomMisAim *= clamp(0.2f, 3.f, randomMisAim * vec2_Len(Diff) / 7.f);
+
+		vec2 AimSpot = vec2_Add(PlayerPos, vec2_Mul_s(PlayerMovement.velocity, t + randomMisAim));
+
+		vec2 AimPath = vec2_Sub(AimSpot, Pos);
+
+		//Turn towards target spot.
+		float AngleDiff = vec2_Angle(AimPath) - vec2_Angle(Dir) + randomMisAim;
+
+		//Fire when ready.
+		if (GetElapsedSeconds(AI->reloadTimer) > game->constants.cannon_shooting_time * 4.f) 
+		{
+			*Transform = mat4_Rotate(*Transform, AngleDiff, new_vec3(0.f, 0.f, 1.f));
+			AI->reloadTimer = MakeTimer();
+			MovementComponent dummyMc;
+			dummyMc.acceleration = new_vec2_v(0.f);
+			dummyMc.velocity = new_vec2_v(0.f);
+
+			SpawnBullet(game, &WorldTransform, &dummyMc, ENEMY, game->constants.bullet_velocity, game->constants.bullet_damage_enemy);
+		}
 	}
 }
 
@@ -410,6 +527,110 @@ void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 	}
 }
 
+void SpawnGunTurret(Game* game, vec2 Pos, bool flip)
+{
+	entity_t building = Scene_CreateEntity(game->scene);
+
+	mat4* transform = Scene_AddComponent(game->scene, building, Component_TRANSFORM);
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3_v2(Pos, 0.f));
+	if (flip) *transform = mat4_Rotate(*transform, PI, new_vec3(0.f, 0.f, 1.f));
+
+	Sprite* sprite = Scene_AddComponent(game->scene, building, Component_SPRITE);
+	*sprite = Sprite_init();
+	sprite->size = new_vec2(2.f, 1.f);
+	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 1), new_uvec2_v(1));
+	sprite->tintColor = new_vec4_v(1.f);
+
+	Colloider* coll = Scene_AddComponent(game->scene, building, Component_COLLOIDER);
+	coll->body = new_Rect_ps(new_vec2(-0.5f, -0.5f), new_vec2(1.f, 1.f));
+	coll->categoryBits = Layer_Enemies;
+	coll->maskBits = COLLISIONMASK_ENEMY;
+	coll->groupIndex = ENEMY;
+
+	HealthComponent* health = Scene_AddComponent(game->scene, building, Component_HEALTH);
+	health->health = game->constants.structure_health;
+	health->invincibility_time = 0.1f;
+	health->max_health = game->constants.structure_health;
+	health->score = game->constants.structure_score;
+	health->lastHit = MakeTimer();
+	health->lastParticle = MakeTimer();
+
+
+	entity_t turret = Scene_CreateEntity(game->scene);
+
+	AddChild(game->scene, building, turret);
+
+	transform = Scene_AddComponent(game->scene, turret, Component_TRANSFORM);
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.3f, 0.f));
+
+	sprite = Scene_AddComponent(game->scene, turret, Component_SPRITE);
+	*sprite = Sprite_init();
+	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 7), new_uvec2(1, 1));
+	sprite->size = new_vec2(2.f, 1.f);
+
+	GunTurretAI* AI = Scene_AddComponent(game->scene, turret, Component_GunTurretAI);
+	AI->reloadTimer = MakeTimer();
+}
+
+void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
+{
+	entity_t tank = Scene_CreateEntity(game->scene);
+
+	mat4* transform = Scene_AddComponent(game->scene, tank, Component_TRANSFORM);
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3_v2(Pos, 0.f));
+	if (flip) *transform = mat4_Rotate(*transform, PI, new_vec3(0.f, 0.f, 1.f));
+
+	Sprite* sprite = Scene_AddComponent(game->scene, tank, Component_SPRITE);
+	*sprite = Sprite_init();
+	sprite->size = new_vec2(2.f, 1.f);
+	sprite->subTex = SubTexture_empty(); //The AI will choose the texture.
+	sprite->tintColor = new_vec4_v(1.f);
+
+	Colloider* coll = Scene_AddComponent(game->scene, tank, Component_COLLOIDER);
+	coll->body = new_Rect_ps(new_vec2(-0.5f, -0.5f), new_vec2(1.f, 1.f));
+	coll->categoryBits = Layer_Enemies;
+	coll->maskBits = COLLISIONMASK_ENEMY;
+	coll->groupIndex = ENEMY;
+
+	HealthComponent* health = Scene_AddComponent(game->scene, tank, Component_HEALTH);
+	health->health = game->constants.vehicle_health;
+	health->invincibility_time = 0.1f;
+	health->max_health = game->constants.vehicle_health;
+	health->score = game->constants.vehicle_score;
+	health->lastHit = MakeTimer();
+	health->lastParticle = MakeTimer();
+
+	MovementComponent* movement = Scene_AddComponent(game->scene, tank, Component_MOVEMENT);
+	movement->acceleration = new_vec2_v(0.f);
+	movement->velocity = new_vec2_v(0.f);
+
+	TankHullAI* tankAI = Scene_AddComponent(game->scene, tank, Component_TankAI);
+	tankAI->IsMissleTruck = MissileTruck;
+
+	if (!MissileTruck) 
+	{
+		entity_t turret = Scene_CreateEntity(game->scene);
+
+		AddChild(game->scene, tank, turret);
+
+		transform = Scene_AddComponent(game->scene, turret, Component_TRANSFORM);
+		*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.2f, 0.f));
+
+		sprite = Scene_AddComponent(game->scene, turret, Component_SPRITE);
+		*sprite = Sprite_init();
+		sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 7), new_uvec2(1, 1));
+		sprite->size = new_vec2(2.f, 1.f);
+
+		GunTurretAI* AI = Scene_AddComponent(game->scene, turret, Component_GunTurretAI);
+		AI->reloadTimer = MakeTimer();
+	}
+	else 
+	{
+		//TODO add missile launcher.
+	}
+
+}
+
 void RegisterGameComponents(Scene_t* scene)
 {
 	RegisterPlane(scene);
@@ -417,4 +638,5 @@ void RegisterGameComponents(Scene_t* scene)
 	RegisterHealth(scene);
 	RegisterProjectile(scene);
 	RegisterGunAIs(scene);
+	RegisterTankAIs(scene);
 }

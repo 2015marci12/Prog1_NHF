@@ -24,7 +24,10 @@ enum ComponentTypes
 	Component_HEALTH,
 	Component_PROJECTILE,
 
-	Component_GunTurretAI,
+	Component_GunTurretAI, 
+	Component_TankAI,
+	Component_RadarStructureAI,
+	Component_PlaneAI,
 };
 
 /*

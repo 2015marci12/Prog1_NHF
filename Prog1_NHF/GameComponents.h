@@ -33,6 +33,7 @@ typedef struct HealthComponent
 	float invincibility_time;
 	Timer_t lastHit;
 	Timer_t lastParticle;
+	uint64_t score;
 } HealthComponent;
 
 void RegisterHealth(Scene_t* scene);
@@ -52,18 +53,13 @@ typedef struct ProjectileComponent
 
 } ProjectileComponent;
 
-typedef enum TankState 
-{
-	Tank_IDLE,
-	Tank_ATTACKING,
-	Tank_FLEEING,
-} TankState;
-
 typedef struct TankHullAI
 {
-	TankState state;
 	bool IsMissleTruck;
 } TankHullAI;
+
+void RegisterTankAIs(Scene_t* scene);
+void UpdateTankAIs(Game* game, float dt, entity_t player);
 
 typedef struct GunTurretAI 
 {
@@ -93,7 +89,9 @@ typedef struct FighterAI
 } FighterAI;
 
 void RegisterProjectile(Scene_t* scene);
-
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
+
+void SpawnGunTurret(Game* game, vec2 Pos, bool flip);
+void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck);
 
 void RegisterGameComponents(Scene_t* scene);

@@ -23,6 +23,7 @@ typedef enum TextureAssets
 	GROUND_TEX,
 	SMOKE_TEX,
 	FONT_TEX,
+	ENEMIES_TEX,
 
 	TEX_COUNT,
 } TextureAssets;
@@ -37,6 +38,7 @@ typedef enum AnimationAssets
 	HEAVY_SMOKE_ANIM,
 	LIGHT_FIRE_ANIM,
 	HEAVY_FIRE_ANIM,
+	RADAR_ANIM,
 
 	ANIM_COUNT,
 } AnimationAssets;
