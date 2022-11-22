@@ -84,6 +84,9 @@ typedef struct MissileLauncherAI
 	Timer_t realoadTimer;
 } MissileLauncherAI;
 
+void RegisterMissileLaunchers(Scene_t* scene);
+void UpdateMissileLaunchers(Game* game, float dt);
+
 typedef enum FighterState 
 {
 	Fighter_IDLE,
@@ -119,6 +122,6 @@ void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
 
 void SpawnGunTurret(Game* game, vec2 Pos, bool flip);
 void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck);
-void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage);
+void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage, entity_t target);
 
 void RegisterGameComponents(Scene_t* scene);

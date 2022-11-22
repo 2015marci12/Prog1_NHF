@@ -222,7 +222,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		//Walls
 		SetupWalls(game);
 
-		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, false);
+		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, true);
 		SpawnGunTurret(game, new_vec2(-10.f, -game->constants.arena_height * 0.5f + 0.5f), false);
 		SpawnGunTurret(game, new_vec2(5.f, game->constants.arena_height * 0.5f - 0.5f), true);
 	}
@@ -269,6 +269,8 @@ void UpdateGame(Game* game, float dt)
 		MovePlanes(game, dt);
 		UpdateMovement(game->scene, dt);
 
+		UpdateMissileLaunchers(game, dt);
+		UpdateMissiles(game, dt);
 		UpdateLifetimes(game->scene);
 		GameUpdateCamera(game, &inputstate);
 		UpdatePlayer(game, &inputstate, dt);

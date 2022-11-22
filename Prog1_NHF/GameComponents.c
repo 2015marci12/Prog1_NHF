@@ -481,17 +481,26 @@ void UpdateMissiles(Game* game, float dt)
 		MovementComponent* Movement = View_GetComponent(&v, 1);
 		MissileGuidanceComponent* Missile = View_GetComponent(&v, 2);
 
+		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+		Dir = vec2_Sub(Dir, Pos);
+
 		//TODO constant for missile lifetime.
 		if (GetElapsedSeconds(Missile->lifeTime) > game->constants.bullet_lifeTime * 5.f)
 		{
-			SpawnSmoke(game->scene, View_GetCurrent(&v), game);
+
+			float rot = RandF_1_Range(0.f, 2.f * PI);
+			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(2.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
+			Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
 			View_DestroyCurrent_FindNext(&v);
 			continue;
 		}
-
-		if (GetElapsedSeconds(Missile->particleTimer) > 0.5f)
+		if (GetElapsedSeconds(Missile->particleTimer) > 0.1f)
 		{
-			SpawnSmoke(game->scene, View_GetCurrent(&v), game);
+			Particle p = MakeParticle_s(Pos, RandF_1_Range(-PI, PI), new_vec4_v(1.f), new_vec2_v(5.f),
+				Animaton_GetDuration(&game->Animations[HEAVY_SMOKE_ANIM]));
+			Particles_Emit(game->Particles[HEAVY_SMOKE_PARTICLES], p);
+
 			Missile->particleTimer = MakeTimer();
 		}
 
@@ -501,21 +510,67 @@ void UpdateMissiles(Game* game, float dt)
 			mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f))
 		));
 
-		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-		Dir = vec2_Sub(Dir, Pos);
+
+		float angle = vec2_Angle(ToTarget) - vec2_Angle(Dir);
+		if (angle > PI) { angle -= 2 * PI; }
+		else if (angle <= -PI) { angle += 2 * PI; }
 
 		float ToTargetRot = clamp(
-			-game->constants.missile_turnrate,
-			game->constants.missile_turnrate,
-			vec2_Angle(ToTarget) - vec2_Angle(Dir)
+			-game->constants.missile_turnrate * dt,
+			game->constants.missile_turnrate * dt,
+			angle
 		);
 
 		*Transform = mat4_Rotate(*Transform, ToTargetRot, new_vec3(0.f, 0.f, 1.f));
-		Movement->velocity = vec2_Mul_s(new_vec2_v4(
-			mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f))), game->constants.missile_velocity);
+
+		Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+		Dir = vec2_Sub(Dir, Pos);
+
+		Movement->velocity = vec2_Mul_s(Dir, game->constants.missile_velocity);
 
 		View_Next(&v);
+	}
+}
+
+void RegisterMissileLaunchers(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_MissileLauncer, MissileLauncherAI);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateMissileLaunchers(Game* game, float dt)
+{
+	View_t PlayerView = View_Create(game->scene, 1, Component_PLAYER);
+	entity_t player = View_GetCurrent(&PlayerView);
+
+	mat4 PlayerTransform = *(mat4*)Scene_Get(game->scene, player, Component_TRANSFORM);
+	MovementComponent PlayerMovement = *(MovementComponent*)Scene_Get(game->scene, player, Component_MOVEMENT);
+
+	vec2 PlayerPos = new_vec2_v4(mat4x4_Mul_v(PlayerTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+
+	for (View_t v = View_Create(game->scene, 2, Component_TRANSFORM, Component_MissileLauncer);
+		!View_End(&v); View_Next(&v))
+	{
+		mat4* Transform = View_GetComponent(&v, 0);
+		MissileLauncherAI* launcer = View_GetComponent(&v, 1);
+		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 Diff = vec2_Sub(PlayerPos, Pos);
+
+		//Engagement range TODO.
+		if (vec2_Len(Diff) > (game->constants.bullet_velocity * game->constants.bullet_lifeTime * 0.6f)) continue;
+
+		//TODO constant missile launcher firing rate.
+		if (GetElapsedSeconds(launcer->realoadTimer) > 5.f)
+		{
+			launcer->realoadTimer = MakeTimer();
+			
+			vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 1.f, 0.f, 1.f)));
+			Dir = vec2_Sub(Dir, Pos);
+			Pos = vec2_Add(Pos, vec2_Mul_s(Dir, 0.25f));
+			
+			SpawnMissile(game, Pos, Dir, ENEMY, game->constants.missile_damage_enemy, player);
+		}
 	}
 }
 
@@ -535,7 +590,7 @@ void SpawnProjectileParticle(Game* game, mat4* transform, ProjectileType type)
 		if (transform)
 		{
 			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-			float rot = (float)rand() / (float)RAND_MAX;
+			float rot = RandF_1_Range(0.f, 2.f * PI);
 			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[LIGHT_SMOKE_ANIM]));
 			p.EndSize = new_vec2_v(1.f);
 			Particles_Emit(game->Particles[LIGHT_SMOKE_PARTICLES], p);
@@ -546,7 +601,7 @@ void SpawnProjectileParticle(Game* game, mat4* transform, ProjectileType type)
 		if (transform)
 		{
 			vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-			float rot = (float)rand() / (float)RAND_MAX;
+			float rot = RandF_1_Range(0.f, 2.f * PI);
 			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(2.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
 			Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
 		}
@@ -679,14 +734,44 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 	}
 	else 
 	{
-		//TODO add missile launcher.
+		MissileLauncherAI* launcher = Scene_AddComponent(game->scene, tank, Component_MissileLauncer);
+		launcher->realoadTimer = MakeTimer();
 	}
 
 }
 
-void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage) 
+void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float damage, entity_t target) 
 {
-	//TODO
+	entity_t missile = Scene_CreateEntity(game->scene);
+
+	mat4* transform = Scene_AddComponent(game->scene, missile, Component_TRANSFORM);
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3_v2(Pos, 0.f));
+	*transform = mat4_Rotate(*transform, vec2_Angle(Dir), new_vec3(0.f, 0.f, 1.f));
+
+	Sprite* sprite = Scene_AddComponent(game->scene, missile, Component_SPRITE);
+	*sprite = Sprite_init();
+	sprite->size = new_vec2(0.5f, 0.25f);
+	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[WEAPON_TEX], new_uvec2(1, 1), new_uvec2(1, 1));
+	sprite->tintColor = new_vec4_v(1.f);
+
+	Colloider* coll = Scene_AddComponent(game->scene, missile, Component_COLLOIDER);
+	coll->body = new_Rect_ps(new_vec2(-0.25f, -0.125f), new_vec2(0.5f, 0.25f));
+	coll->categoryBits = Layer_Missiles;
+	coll->maskBits = COLLISIONMASK_ENEMY;
+	coll->groupIndex = alligiance;
+
+	MovementComponent* movement = Scene_AddComponent(game->scene, missile, Component_MOVEMENT);
+	movement->acceleration = new_vec2_v(0.f);
+	movement->velocity = new_vec2_v(0.f);
+
+	ProjectileComponent* proj = Scene_AddComponent(game->scene, missile, Component_PROJECTILE);
+	proj->damage = game->constants.missile_damage_enemy;
+	proj->type = MISSILE;
+
+	MissileGuidanceComponent* seeker = Scene_AddComponent(game->scene, missile, Component_MissileGuidance);
+	seeker->target = target;
+	seeker->lifeTime = MakeTimer();
+	seeker->particleTimer = MakeTimer();
 }
 
 void RegisterGameComponents(Scene_t* scene)
@@ -697,4 +782,6 @@ void RegisterGameComponents(Scene_t* scene)
 	RegisterProjectile(scene);
 	RegisterGunAIs(scene);
 	RegisterTankAIs(scene);
+	RegisterMissiles(scene);
+	RegisterMissileLaunchers(scene);
 }
