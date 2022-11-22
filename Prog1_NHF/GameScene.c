@@ -395,7 +395,7 @@ void GameRenderBackground(Game* game, Renderer2D* renderer)
 	BG1Offset.z = -10.f;
 	BG1Offset.y -= game->constants.arena_height * 0.1f;
 	const float BG1Aspect = 367.f / 550.f;
-	const float BG1Width = game->constants.arena_width * 0.15f;
+	const float BG1Width = 2.2f * (game->constants.viewport_scale + (game->constants.arena_width * fabsf(BG1parallax)));
 
 	Renderer2D_DrawRotatedQuad_s(renderer, BG1Offset, new_vec2(BG1Width, BG1Width * BG1Aspect), 0.f, new_vec4_v(0.9f),
 		TextureAtlas_SubTexture(&game->Textures[BG1_TEX], new_uvec2(0, 0), new_uvec2(1, 1)));

@@ -28,6 +28,7 @@ enum ComponentTypes
 	Component_TankAI,
 	Component_RadarStructureAI,
 	Component_PlaneAI,
+	Component_MissileGuidance,
 };
 
 /*

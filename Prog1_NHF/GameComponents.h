@@ -69,6 +69,16 @@ typedef struct GunTurretAI
 void RegisterGunAIs(Scene_t* scene);
 void UpdateGunTurretAIs(Game* game, float dt, entity_t player);
 
+typedef struct MissileGuidanceComponent
+{
+	entity_t target;
+	Timer_t lifeTime;
+	Timer_t particleTimer;
+} MissileGuidanceComponent;
+
+void RegisterMissiles(Scene_t* scene);
+void UpdateMissiles(Game* game, float dt);
+
 typedef struct MissileLauncherAI 
 {
 	Timer_t realoadTimer;
@@ -88,10 +98,27 @@ typedef struct FighterAI
 	int burstCounter;
 } FighterAI;
 
+typedef enum PowerupType 
+{
+	HEALTH,
+	MISSILES,
+	BOMBS,
+	SCORE,
+	POWERUP_MAX,
+} PowerupType;
+
+typedef struct PowerupComponent 
+{
+	PowerupType type;
+	vec2 SpawnPos;
+	Timer_t timer;
+} PowerupComponent;
+
 void RegisterProjectile(Scene_t* scene);
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
 
 void SpawnGunTurret(Game* game, vec2 Pos, bool flip);
 void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck);
+void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage);
 
 void RegisterGameComponents(Scene_t* scene);

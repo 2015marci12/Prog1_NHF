@@ -6,7 +6,8 @@ BitmapFont* LoadBitmapFont(const char* filepath, bool invertY)
 	BitmapFont* ret = malloc(sizeof(BitmapFont)); //Allocate space for the font.
 	ret->invertY = invertY;
 
-	FILE* file = fopen(filepath, "r");
+	FILE* file;
+	fopen_s(&file, filepath, "r");
 	if (!file) 
 	{
 		ERROR("Could not open bitmap font file: %s\n", filepath);

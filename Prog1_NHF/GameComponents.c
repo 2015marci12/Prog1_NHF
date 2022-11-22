@@ -466,6 +466,59 @@ void RegisterProjectile(Scene_t* scene)
 	Scene_AddComponentType(scene, cinf);
 }
 
+void RegisterMissiles(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_MissileGuidance, MissileGuidanceComponent);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateMissiles(Game* game, float dt)
+{
+	for (View_t v = View_Create(game->scene, 3, Component_TRANSFORM, Component_MOVEMENT, Component_MissileGuidance);
+		!View_End(&v);)
+	{
+		mat4* Transform = View_GetComponent(&v, 0);
+		MovementComponent* Movement = View_GetComponent(&v, 1);
+		MissileGuidanceComponent* Missile = View_GetComponent(&v, 2);
+
+		//TODO constant for missile lifetime.
+		if (GetElapsedSeconds(Missile->lifeTime) > game->constants.bullet_lifeTime * 5.f)
+		{
+			SpawnSmoke(game->scene, View_GetCurrent(&v), game);
+			View_DestroyCurrent_FindNext(&v);
+			continue;
+		}
+
+		if (GetElapsedSeconds(Missile->particleTimer) > 0.5f)
+		{
+			SpawnSmoke(game->scene, View_GetCurrent(&v), game);
+			Missile->particleTimer = MakeTimer();
+		}
+
+		mat4 target_Transform = CalcWorldTransform(game->scene, Missile->target);
+		vec2 ToTarget = new_vec2_v4(vec4_Sub(
+			mat4x4_Mul_v(target_Transform, new_vec4(0.f, 0.f, 0.f, 1.f)),
+			mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f))
+		));
+
+		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+		Dir = vec2_Sub(Dir, Pos);
+
+		float ToTargetRot = clamp(
+			-game->constants.missile_turnrate,
+			game->constants.missile_turnrate,
+			vec2_Angle(ToTarget) - vec2_Angle(Dir)
+		);
+
+		*Transform = mat4_Rotate(*Transform, ToTargetRot, new_vec3(0.f, 0.f, 1.f));
+		Movement->velocity = vec2_Mul_s(new_vec2_v4(
+			mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f))), game->constants.missile_velocity);
+
+		View_Next(&v);
+	}
+}
+
 void ProjectileHit(HealthComponent* health, ProjectileComponent* proj)
 {
 	if (GetElapsedSeconds(health->lastHit) > health->invincibility_time)
@@ -561,7 +614,7 @@ void SpawnGunTurret(Game* game, vec2 Pos, bool flip)
 	AddChild(game->scene, building, turret);
 
 	transform = Scene_AddComponent(game->scene, turret, Component_TRANSFORM);
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.3f, 0.f));
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.3f, 2.f));
 
 	sprite = Scene_AddComponent(game->scene, turret, Component_SPRITE);
 	*sprite = Sprite_init();
@@ -629,6 +682,11 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 		//TODO add missile launcher.
 	}
 
+}
+
+void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage) 
+{
+	//TODO
 }
 
 void RegisterGameComponents(Scene_t* scene)
