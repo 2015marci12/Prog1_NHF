@@ -32,6 +32,9 @@ int DiffIniHandler(const void* user, const char* section, const char* id, const 
 	STRING_CHECK_SET_VAL(ptr, id, value, missile_damage);
 	STRING_CHECK_SET_VAL(ptr, id, value, missile_velocity);
 	STRING_CHECK_SET_VAL(ptr, id, value, missile_turnrate);
+	STRING_CHECK_SET_VAL(ptr, id, value, missile_lifetime);
+	STRING_CHECK_SET_VAL(ptr, id, value, missile_reload_enemy);
+	STRING_CHECK_SET_VAL(ptr, id, value, missile_engagement_range);
 	STRING_CHECK_SET_VAL(ptr, id, value, bullet_damage_enemy);
 	STRING_CHECK_SET_VAL(ptr, id, value, missile_damage_enemy);
 

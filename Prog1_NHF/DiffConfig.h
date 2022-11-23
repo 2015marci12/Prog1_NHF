@@ -34,6 +34,9 @@ typedef struct DiffConfig
 	float missile_damage;
 	float missile_velocity;
 	float missile_turnrate;
+	float missile_lifetime;
+	float missile_reload_enemy;
+	float missile_engagement_range;
 
 	float bullet_damage_enemy;
 	float missile_damage_enemy;

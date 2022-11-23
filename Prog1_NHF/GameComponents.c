@@ -15,22 +15,20 @@ void MovePlanes(Game* game, float dt)
 		PlaneComponent* plane = View_GetComponent(&view, 1);
 		MovementComponent* mc = View_GetComponent(&view, 2);
 
-		vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-		vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
+		vec2 Pos, Dir;
+		float rot;
+		Transform_Decompose_2D(*transform, &Pos, &Dir, &rot);
 		vec2 velocitynormal = vec2_Normalize(mc->velocity);
 		float vel = vec2_Len(mc->velocity);
-
-		float dirAngle = vec2_Angle(direction);
+;
 		float velAngle = vec2_Angle(velocitynormal);
 
 		//Angle differernce.
-		float anglediff = dirAngle - velAngle;
-		anglediff += (anglediff > PI) ? -(PI * 2.f) : (anglediff < -PI) ? (PI * 2.f) : 0;
+		float anglediff = Angle_Diff(rot, velAngle);
 		float aoa = max(-1.f, min(1.f, (anglediff))); //aoa restricted between [-1, 1]
 
 		vec2 aeroforce = vec2_Mul_s(velocitynormal, -1.f * (0.5f + fabsf(aoa)) * plane->dragcoeff * (vel * vel)); //drag.
-		vec2 thrustforce = vec2_Mul_s(direction, plane->thrust); //thrust.
+		vec2 thrustforce = vec2_Mul_s(Dir, plane->thrust); //thrust.
 		vec2 gravity = vec2_Mul_s(new_vec2(0.f, -1.f), game->constants.g * plane->mass); //gravity.
 
 		//Lift.
@@ -213,13 +211,15 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 	//shooting.
 	if (input->firing)
 	{
-		//cannon animation.
+		//Animation.
 		Timer_t timer = { 0 };
-		sprite->overlays[1] = Animation_GetAt(&game->Animations[CANNON_ANIM], GetElapsedSeconds(timer), NULL);
 
 		switch (pc->selected_weapon)
 		{
 		case 0:
+			//Anim
+			sprite->overlays[1] = Animation_GetAt(&game->Animations[CANNON_ANIM], GetElapsedSeconds(timer), NULL);
+			//Fire bullet.
 			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time)
 			{
 				pc->shootingTimer = MakeTimer();
@@ -228,10 +228,14 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 			break;
 		case 1: break;
 		case 2:
-			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time) //TODO
+			//Anim
+			sprite->overlays[1] = TextureAtlas_SubTexture(&game->Textures[PLAYER_TEX], new_uvec2(1, 2), new_uvec2(1, 1));
+			//Release bomb.
+			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time && pc->releasedAfterFiring)
 			{
 				pc->shootingTimer = MakeTimer();
 				SpawnBomb(game, transform, mc);
+				pc->releasedAfterFiring = false; //Wait for trigger release before releasing another bomb.
 			}
 			break;
 		default:
@@ -261,13 +265,15 @@ void UpdateHealth(Game* game, float dt)
 			mat4* transform = Scene_Get(game->scene, View_GetCurrent(&v), Component_TRANSFORM);
 			if (transform)
 			{
-				//Death animation. TODO maybe change to something with a bit more OOMPH. Also sound effect.
+				//Death animation. 
+				//TODO maybe change to something with a bit more OOMPH. Also sound effect.
 				vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 
 				Particle p = MakeParticle_s(Pos, 0.f, new_vec4_v(1.f), new_vec2_v(5.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
 				Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
 			}
 			game->score += health->score;
+			if (health->cb) health->cb(View_GetCurrent(&v), game);
 			KillChildren(game->scene, View_GetCurrent(&v));
 			View_DestroyCurrent_FindNext(&v);
 		}
@@ -313,13 +319,13 @@ void UpdateHealth(Game* game, float dt)
 
 			//Invincibility animation.
 			Sprite* sprite = Scene_Get(game->scene, View_GetCurrent(&v), Component_SPRITE);
-			if (sprite && (GetElapsedSeconds(health->lastHit) < health->invincibility_time)) 
+			if (sprite && (GetElapsedSeconds(health->lastHit) < health->invincibility_time))
 			{
 				float alpha = health->invincibility_time / GetElapsedSeconds(health->lastHit) + 1.f;
 				sprite->tintColor = new_vec4_v(alpha);
 				sprite->tintColor.a = 1.f;
 			}
-			else if(sprite)
+			else if (sprite)
 			{
 				sprite->tintColor = new_vec4_v(1.f);
 			}
@@ -337,8 +343,9 @@ void RegisterTankAIs(Scene_t* scene)
 void UpdateTankAIs(Game* game, float dt, entity_t player)
 {
 	mat4 PlayerTransform = *(mat4*)Scene_Get(game->scene, player, Component_TRANSFORM);
+	vec2 PlayerPos;
+	Transform_Decompose_2D(PlayerTransform, &PlayerPos, NULL, NULL);
 
-	vec2 PlayerPos = new_vec2_v4(mat4x4_Mul_v(PlayerTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 	for (View_t v = View_Create(game->scene, 4, Component_TRANSFORM, Component_MOVEMENT, Component_SPRITE, Component_TankAI);
 		!View_End(&v); View_Next(&v))
 	{
@@ -347,33 +354,32 @@ void UpdateTankAIs(Game* game, float dt, entity_t player)
 		Sprite* Sprite = View_GetComponent(&v, 2);
 		TankHullAI* AI = View_GetComponent(&v, 3);
 
-		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+		vec2 Pos;
+		Transform_Decompose_2D(*Transform, &Pos, NULL, NULL);
 		vec2 Diff = vec2_Sub(PlayerPos, Pos);
 
 		//Movement towards player.
-		if (vec2_Len(Diff) > 20.f) 
+		if (vec2_Len(Diff) > 20.f)
 		{
 			Movement->velocity = new_vec2_v(0.f);
 		}
-		else 
+		else
 		{
 			Movement->velocity = new_vec2(clamp(-1.f, 1.f, Diff.x) * 2.f, 0.f);
 		}
 
 		//Animation
-		if (AI->IsMissleTruck) 
+		if (AI->IsMissleTruck)
 		{
 			Sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 5), new_uvec2(1, 1));
 		}
-		else 
+		else
 		{
 			entity_t turretChild = FirstChild(game->scene, View_GetCurrent(&v));
 			mat4* TurretTransform = Scene_Get(game->scene, turretChild, Component_TRANSFORM);
 
-			vec2 Pos2 = new_vec2_v4(mat4x4_Mul_v(*TurretTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-			vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*TurretTransform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-			Dir = vec2_Sub(Dir, Pos2);
-
+			vec2 Pos2, Dir;
+			Transform_Decompose_2D(*TurretTransform, &Pos2, &Dir, NULL);
 
 			SubTexture directions[2] =
 			{
@@ -382,10 +388,9 @@ void UpdateTankAIs(Game* game, float dt, entity_t player)
 			};
 
 			Sprite->subTex = directions[((Dir.x <= 0.f) ^ (Diff.x <= 0.f)) ? 1 : 0];
-			
 		}
 
-		Sprite->subTex = SubTexture_Flip(Sprite->subTex, (Diff.x <= 0.f), false);	
+		Sprite->subTex = SubTexture_Flip(Sprite->subTex, (Diff.x <= 0.f), false);
 	}
 }
 
@@ -400,7 +405,8 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 	mat4 PlayerTransform = *(mat4*)Scene_Get(game->scene, player, Component_TRANSFORM);
 	MovementComponent PlayerMovement = *(MovementComponent*)Scene_Get(game->scene, player, Component_MOVEMENT);
 
-	vec2 PlayerPos = new_vec2_v4(mat4x4_Mul_v(PlayerTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+	vec2 PlayerPos;
+	Transform_Decompose_2D(PlayerTransform, &PlayerPos, NULL, NULL);
 
 	for (View_t v = View_Create(game->scene, 3, Component_TRANSFORM, Component_SPRITE, Component_GunTurretAI);
 		!View_End(&v); View_Next(&v))
@@ -410,10 +416,10 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 		GunTurretAI* AI = View_GetComponent(&v, 2);
 
 		mat4 WorldTransform = CalcWorldTransform(game->scene, View_GetCurrent(&v));
-		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(WorldTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		vec2 Dir = new_vec2_v4(mat4x4_Mul_v(WorldTransform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-		Dir = vec2_Sub(Dir, Pos);
-		
+		vec2 Pos, Dir;
+		float rot;
+		Transform_Decompose_2D(WorldTransform, &Pos, &Dir, &rot);
+
 		vec2 Diff = vec2_Sub(PlayerPos, Pos);
 
 		if (vec2_Len(Diff) > (game->constants.bullet_velocity * game->constants.bullet_lifeTime * 0.6f)) continue;
@@ -424,7 +430,7 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 		float c = vec2_Dot(Diff, Diff);
 
 		//Quadratic formula.
-		float p = -b / (2.f * a); 
+		float p = -b / (2.f * a);
 		float q = sqrtf((b * b) - 4 * a * c) / (2.f * a);
 		float t1 = p - q;
 		float t2 = p + q;
@@ -440,14 +446,13 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 		randomMisAim *= clamp(0.2f, 3.f, randomMisAim * vec2_Len(Diff) / 7.f);
 
 		vec2 AimSpot = vec2_Add(PlayerPos, vec2_Mul_s(PlayerMovement.velocity, t + randomMisAim));
-
 		vec2 AimPath = vec2_Sub(AimSpot, Pos);
 
 		//Turn towards target spot.
-		float AngleDiff = vec2_Angle(AimPath) - vec2_Angle(Dir) + randomMisAim;
+		float AngleDiff = Angle_Diff(vec2_Angle(AimPath), rot) + randomMisAim;
 
 		//Fire when ready.
-		if (GetElapsedSeconds(AI->reloadTimer) > game->constants.cannon_shooting_time * 4.f) 
+		if (GetElapsedSeconds(AI->reloadTimer) > game->constants.cannon_shooting_time * 4.f)
 		{
 			*Transform = mat4_Rotate(*Transform, AngleDiff, new_vec3(0.f, 0.f, 1.f));
 			AI->reloadTimer = MakeTimer();
@@ -474,23 +479,22 @@ void RegisterMissiles(Scene_t* scene)
 
 void UpdateMissiles(Game* game, float dt)
 {
-	for (View_t v = View_Create(game->scene, 3, Component_TRANSFORM, Component_MOVEMENT, Component_MissileGuidance);
+	for (View_t v = View_Create(game->scene, 4, Component_TRANSFORM, Component_MOVEMENT, Component_MissileGuidance, Component_SPRITE);
 		!View_End(&v);)
 	{
 		mat4* Transform = View_GetComponent(&v, 0);
 		MovementComponent* Movement = View_GetComponent(&v, 1);
 		MissileGuidanceComponent* Missile = View_GetComponent(&v, 2);
+		Sprite* Sprite = View_GetComponent(&v, 3);
 
-		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-		Dir = vec2_Sub(Dir, Pos);
+		vec2 Pos, Dir;
+		float rot;
+		Transform_Decompose_2D(*Transform, &Pos, &Dir, &rot);
 
-		//TODO constant for missile lifetime.
-		if (GetElapsedSeconds(Missile->lifeTime) > game->constants.bullet_lifeTime * 5.f)
+		if (GetElapsedSeconds(Missile->lifeTime) > game->constants.missile_lifetime)
 		{
-
-			float rot = RandF_1_Range(0.f, 2.f * PI);
-			Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(2.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
+			float prot = RandF_1_Range(0.f, 2.f * PI);
+			Particle p = MakeParticle_s(Pos, prot, new_vec4_v(1.f), new_vec2_v(2.f), Animaton_GetDuration(&game->Animations[EXPLOSION_ANIM]));
 			Particles_Emit(game->Particles[PARTICLE_EXPLOSION], p);
 			View_DestroyCurrent_FindNext(&v);
 			continue;
@@ -505,29 +509,27 @@ void UpdateMissiles(Game* game, float dt)
 		}
 
 		mat4 target_Transform = CalcWorldTransform(game->scene, Missile->target);
-		vec2 ToTarget = new_vec2_v4(vec4_Sub(
-			mat4x4_Mul_v(target_Transform, new_vec4(0.f, 0.f, 0.f, 1.f)),
-			mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f))
-		));
+		vec2 TargetPos;
+		Transform_Decompose_2D(target_Transform, &TargetPos, NULL, NULL);
+		vec2 ToTarget = vec2_Sub(TargetPos, Pos);
 
-
-		float angle = vec2_Angle(ToTarget) - vec2_Angle(Dir);
-		if (angle > PI) { angle -= 2 * PI; }
-		else if (angle <= -PI) { angle += 2 * PI; }
-
+		//Rotate towards target (rate limited)
 		float ToTargetRot = clamp(
 			-game->constants.missile_turnrate * dt,
 			game->constants.missile_turnrate * dt,
-			angle
+			Angle_Diff(vec2_Angle(ToTarget), rot)
 		);
-
 		*Transform = mat4_Rotate(*Transform, ToTargetRot, new_vec3(0.f, 0.f, 1.f));
-
-		Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-		Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-		Dir = vec2_Sub(Dir, Pos);
-
+		Transform_Decompose_2D(*Transform, &Pos, &Dir, &rot);
 		Movement->velocity = vec2_Mul_s(Dir, game->constants.missile_velocity);
+
+		//Animation
+		float t = GetElapsedSeconds(Missile->lifeTime);
+		float animationFrameTime = 0.1f;
+		int phase = fmodf(t, 2.f * animationFrameTime) < animationFrameTime ? 0 : 1; //Animatoion frame.
+		Sprite->subTex = phase == 0 ?
+			TextureAtlas_SubTexture(&game->Textures[WEAPON_TEX], new_uvec2(1, 1), new_uvec2(1, 1)) :
+			TextureAtlas_SubTexture(&game->Textures[WEAPON_TEX], new_uvec2(0, 0), new_uvec2(1, 1));
 
 		View_Next(&v);
 	}
@@ -557,18 +559,16 @@ void UpdateMissileLaunchers(Game* game, float dt)
 		vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 		vec2 Diff = vec2_Sub(PlayerPos, Pos);
 
-		//Engagement range TODO.
-		if (vec2_Len(Diff) > (game->constants.bullet_velocity * game->constants.bullet_lifeTime * 0.6f)) continue;
+		if (vec2_Len(Diff) > game->constants.missile_engagement_range) continue;
 
-		//TODO constant missile launcher firing rate.
-		if (GetElapsedSeconds(launcer->realoadTimer) > 5.f)
+		if (GetElapsedSeconds(launcer->realoadTimer) > game->constants.missile_reload_enemy)
 		{
 			launcer->realoadTimer = MakeTimer();
-			
+
 			vec2 Dir = new_vec2_v4(mat4x4_Mul_v(*Transform, new_vec4(0.f, 1.f, 0.f, 1.f)));
 			Dir = vec2_Sub(Dir, Pos);
 			Pos = vec2_Add(Pos, vec2_Mul_s(Dir, 0.25f));
-			
+
 			SpawnMissile(game, Pos, Dir, ENEMY, game->constants.missile_damage_enemy, player);
 		}
 	}
@@ -662,14 +662,14 @@ void SpawnGunTurret(Game* game, vec2 Pos, bool flip)
 	health->score = game->constants.structure_score;
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
-
+	health->cb = NULL;
 
 	entity_t turret = Scene_CreateEntity(game->scene);
 
 	AddChild(game->scene, building, turret);
 
 	transform = Scene_AddComponent(game->scene, turret, Component_TRANSFORM);
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.3f, 2.f));
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.3f, -2.f));
 
 	sprite = Scene_AddComponent(game->scene, turret, Component_SPRITE);
 	*sprite = Sprite_init();
@@ -707,6 +707,7 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 	health->score = game->constants.vehicle_score;
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
+	health->cb = NULL;
 
 	MovementComponent* movement = Scene_AddComponent(game->scene, tank, Component_MOVEMENT);
 	movement->acceleration = new_vec2_v(0.f);
@@ -715,7 +716,7 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 	TankHullAI* tankAI = Scene_AddComponent(game->scene, tank, Component_TankAI);
 	tankAI->IsMissleTruck = MissileTruck;
 
-	if (!MissileTruck) 
+	if (!MissileTruck)
 	{
 		entity_t turret = Scene_CreateEntity(game->scene);
 
@@ -732,15 +733,14 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 		GunTurretAI* AI = Scene_AddComponent(game->scene, turret, Component_GunTurretAI);
 		AI->reloadTimer = MakeTimer();
 	}
-	else 
+	else
 	{
 		MissileLauncherAI* launcher = Scene_AddComponent(game->scene, tank, Component_MissileLauncer);
 		launcher->realoadTimer = MakeTimer();
 	}
-
 }
 
-void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float damage, entity_t target) 
+void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float damage, entity_t target)
 {
 	entity_t missile = Scene_CreateEntity(game->scene);
 

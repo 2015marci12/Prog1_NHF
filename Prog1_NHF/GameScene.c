@@ -201,6 +201,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		phealth->lastParticle = MakeTimer();
 		phealth->lastHit = MakeTimer();
 		phealth->score = 0;
+		phealth->cb = NULL;
 
 		//Camera
 		int w, h;
@@ -251,6 +252,7 @@ void DispatchGameEvents(Game* game, EventDispatcher_t* dispatcher)
 {
 	DispatchEvent(dispatcher, SDL_WINDOWEVENT, GameResizeEvent, game);
 	DispatchEvent(dispatcher, CollisionEventType(), GameOnCollision, game);
+	DispatchEvent(dispatcher, SDL_MOUSEBUTTONUP, GameOnMouseRelease, game);
 }
 
 void UpdateGame(Game* game, float dt)
@@ -309,6 +311,9 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	Renderer2D_DrawText(renderer, new_vec3(0.f, 0.f, 100.f), game->font, 1.f, new_vec4_v(1.f), "Hello,\nworld!");
 
 	Renderer2D_EndScene(renderer);
+
+	//Render GUI scene.
+	GameRenderGui(game, renderer);
 }
 
 bool GameResizeEvent(SDL_Event* e, void* userData)
@@ -352,11 +357,26 @@ bool GameOnCollision(SDL_Event* e, void* userData)
 
 	//Physics.
 	PhysicsResolveCollision(scene, ev);
+
+	//Game logic.
 	ResolveCollisionProjectiles(game, ev->a, ev->b);
 
-	//TODO gamelogic.
-
 	return false;
+}
+
+void GameOnMouseRelease(SDL_Event* e, void* userData)
+{
+	//Translate pointers.
+	SDL_MouseButtonEvent* ev = e;
+	Game* game = userData;
+
+	if (ev->button == SDL_BUTTON_LEFT) 
+	{
+		//Set release trigger for the player.
+		View_t Player = View_Create(game->scene, 1, Component_PLAYER);
+		PlayerComponent* pc = View_GetComponent(&Player, 0);
+		pc->releasedAfterFiring = true;
+	}
 }
 
 void GameUpdateCamera(Game* game, InputState* input)
@@ -401,4 +421,22 @@ void GameRenderBackground(Game* game, Renderer2D* renderer)
 
 	Renderer2D_DrawRotatedQuad_s(renderer, BG1Offset, new_vec2(BG1Width, BG1Width * BG1Aspect), 0.f, new_vec4_v(0.9f),
 		TextureAtlas_SubTexture(&game->Textures[BG1_TEX], new_uvec2(0, 0), new_uvec2(1, 1)));
+}
+
+void GameRenderGui(Game* game, Renderer2D* renderer)
+{
+	View_t Player = View_Create(game->scene, 2, Component_PLAYER, Component_HEALTH);
+	PlayerComponent* pc = View_GetComponent(&Player, 0);
+	HealthComponent* health = View_GetComponent(&Player, 1);
+
+	int w, h;
+	SDL_GetWindowSize(game->window, &w, &h);
+
+	mat4 view = mat4_Ortho(0, w, 0, h, 30, -30);
+	Renderer2D_BeginScene(renderer, view);
+
+	char buff[256]; //Buffer to format the displayed text with.
+
+
+	Renderer2D_EndScene(renderer, view);
 }

@@ -507,3 +507,28 @@ void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fon
 		str++;
 	}
 }
+
+vec2 Renderer2D_CalcTextSize(Renderer2D* inst, BitmapFont* font, float fontSize, vec4 color, const char* text)
+{
+	vec2 offset = new_vec2_v(0.f);
+	vec2 Max = offset;
+	char* str = text;
+	while (*str)
+	{
+		if (*str == '\n')
+		{
+			offset.y -= fontSize * 1.1f;
+			offset.x = 0;
+		}
+		else
+		{
+			vec2 size;
+			float advance;
+			SubTexture tex = FontGetChar(font, fontSize, *str, &size, &advance);
+			offset.x += advance;
+		}
+		Max = vec2_Max_v(Max, offset);
+		str++;
+	}
+	return Max;
+}

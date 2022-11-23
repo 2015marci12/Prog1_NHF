@@ -21,10 +21,14 @@ typedef struct PlayerComponent
 	Timer_t boosterParticleTimer;
 	Timer_t shootingTimer;
 	int selected_weapon;
+	bool releasedAfterFiring;
 } PlayerComponent;
 
 void RegisterPlayer(Scene_t* scene);
 void UpdatePlayer(Game* game, InputState* input, float dt);
+
+
+typedef void(*HealthIsZeroCallback_t)(entity_t, Game*);
 
 typedef struct HealthComponent
 {
@@ -34,6 +38,7 @@ typedef struct HealthComponent
 	Timer_t lastHit;
 	Timer_t lastParticle;
 	uint64_t score;
+	HealthIsZeroCallback_t cb;
 } HealthComponent;
 
 void RegisterHealth(Scene_t* scene);

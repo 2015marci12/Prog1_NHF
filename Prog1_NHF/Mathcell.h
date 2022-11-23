@@ -3,6 +3,24 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+/*
+* Useful math funcitions.
+*/
+
+static float clamp(float low, float high, float val)
+{
+    return max(low, min(high, val));
+}
+
+#define PI 3.1415f
+
+static float Angle_Diff(float a, float b)
+{
+    float angle = a - b;
+    if (angle > PI) { angle -= 2 * PI; }
+    else if (angle <= -PI) { angle += 2 * PI; }
+    return angle;
+}
 
 /*
 * Vector and matrix math.
@@ -281,6 +299,8 @@ typedef prefix ## mat2x2 prefix ## mat2; \
 //Matrix "template" instantiations.
 matTypes(, float);
 
+
+
 //Matrix transform functions
 static mat4 mat4_Scale(mat4 a, vec3 scale) 
 {
@@ -459,6 +479,17 @@ static mat4 mat4_Inverse(mat4 a)
     return mat4x4_Mul_s(Inverse, OneOverDeterminant);
 }
 
+static void Transform_Decompose_2D(mat4 Transform, vec2* PosOut, vec2* DirOut, float* rotOut) 
+{
+    vec2 Pos = new_vec2_v4(mat4x4_Mul_v(Transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+    vec2 Dir = new_vec2_v4(mat4x4_Mul_v(Transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
+    Dir = vec2_Sub(Dir, Pos);
+
+    if (PosOut) { *PosOut = Pos; }
+    if (DirOut) { *DirOut = Dir; }
+    if (rotOut) { *rotOut = vec2_Angle(Dir); };
+}
+
 //TODO projection, frustrum, decompose and other matrix funcions.
 
 /*
@@ -532,10 +563,4 @@ static Rect Rect_Transformed(mat4 transform, Rect rect)
     return new_Rect_ps(minPos, Size);
 }
 
-static float clamp(float low, float high, float val) 
-{
-    return max(low, min(high, val));
-}
-
-#define PI 3.1415f
 

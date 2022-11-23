@@ -24,7 +24,7 @@ enum ComponentTypes
 	Component_HEALTH,
 	Component_PROJECTILE,
 
-	Component_GunTurretAI, 
+	Component_GunTurretAI,
 	Component_TankAI,
 	Component_RadarStructureAI,
 	Component_PlaneAI,
@@ -37,7 +37,6 @@ enum ComponentTypes
 */
 void RegisterTransform(Scene_t* scene);
 mat4 CalcWorldTransform(Scene_t* scene, entity_t e);
-
 
 /*
 * Sprite
@@ -56,14 +55,12 @@ void RegisterSprite(Scene_t* scene);
 void RenderSprites(Scene_t* scene, Renderer2D* renderer);
 Sprite Sprite_init();
 
-
 /*
 * Camera
 */
 typedef mat4 Camera;
 void RegisterCamera(Scene_t* scene);
 entity_t GetCamera(Scene_t* scene, mat4** transform, mat4** projection, mat4* mvp);
-
 
 /*
 * Relationships (entity hierarchy)
@@ -97,11 +94,10 @@ void RemoveChildren(Scene_t* scene, entity_t e);
 void KillChildren(Scene_t* scene, entity_t e);
 void Orphan(Scene_t* scene, entity_t e);
 
-
 /*
 * AABB Colloider.
 */
-typedef struct Colloider 
+typedef struct Colloider
 {
 	Rect body;
 	uint64_t maskBits; //A mask that says what categories to check for collisions.
@@ -109,7 +105,7 @@ typedef struct Colloider
 	int32_t groupIndex; //0 will not check, negative only checks same indices, positive only checks different indices.
 } Colloider;
 
-typedef struct CollisionEvent 
+typedef struct CollisionEvent
 {
 	entity_t a, b; //The two entities that colloided.
 	vec2 normal; //The collision normal.
@@ -130,11 +126,10 @@ void FireCollisionEvents(Scene_t* scene);
 */
 void DebugDrawColloiders(Scene_t* scene, Renderer2D* renderer);
 
-
 /*
 * Movement.
 */
-typedef struct MovementComponent 
+typedef struct MovementComponent
 {
 	vec2 velocity;
 	vec2 acceleration;
@@ -143,12 +138,11 @@ typedef struct MovementComponent
 void RegisterMovement(Scene_t* scene);
 void UpdateMovement(Scene_t* scene, float dt);
 
-
 /*
 * Lifetime.
 */
 typedef bool(*LifetimeCallback_t)(Scene_t* scene, entity_t e, const void* userdata);
-typedef struct LifetimeComponent 
+typedef struct LifetimeComponent
 {
 	Timer_t timer;
 	float lifetime;
@@ -164,7 +158,7 @@ void UpdateLifetimes(Scene_t* scene);
 * PhysicsBody.
 */
 
-typedef struct PhysicsComponent 
+typedef struct PhysicsComponent
 {
 	float restitution;
 	float mass; //0 mass means that the object is static.

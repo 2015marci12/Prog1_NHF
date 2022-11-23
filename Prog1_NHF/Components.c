@@ -35,6 +35,8 @@ void RenderSprites(Scene_t* scene, Renderer2D* renderer)
 		Renderer2D_DrawSprite(renderer, transform, sprite->size, sprite->tintColor, sprite->subTex);
 		for (int i = 0; i < MAX_ANIM_OVERLAY_COUNT; i++)
 		{
+
+			transform = mat4_Translate(transform, new_vec3(0.f, 0.f, 1.f));
 			//Render overlay if applicable.
 			if (sprite->overlays[i].texture != NULL)
 			{
