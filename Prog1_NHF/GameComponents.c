@@ -231,11 +231,12 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 			//Anim
 			sprite->overlays[1] = TextureAtlas_SubTexture(&game->Textures[PLAYER_TEX], new_uvec2(1, 2), new_uvec2(1, 1));
 			//Release bomb.
-			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time && pc->releasedAfterFiring)
+			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time && pc->releasedAfterFiring && pc->BombAmmo)
 			{
 				pc->shootingTimer = MakeTimer();
 				SpawnBomb(game, transform, mc);
 				pc->releasedAfterFiring = false; //Wait for trigger release before releasing another bomb.
+				pc->BombAmmo--;
 			}
 			break;
 		default:

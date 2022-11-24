@@ -22,6 +22,8 @@ typedef struct PlayerComponent
 	Timer_t shootingTimer;
 	int selected_weapon;
 	bool releasedAfterFiring;
+	uint32_t MissileAmmo;
+	uint32_t BombAmmo;
 } PlayerComponent;
 
 void RegisterPlayer(Scene_t* scene);

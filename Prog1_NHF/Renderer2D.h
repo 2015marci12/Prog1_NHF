@@ -66,6 +66,7 @@ void Renderer2D_BeginScene(Renderer2D* inst, mat4 camera);
 void Renderer2D_EndScene(Renderer2D* inst);
 
 void Renderer2D_Clear(Renderer2D* inst, vec4 color);
+void Renderer2D_ClearDepth(Renderer2D* inst);
 void Renderer2D_SetLineWidth(Renderer2D* inst, float width);
 
 void Renderer2D_DrawQuad(Renderer2D* inst, vec3 pos, vec2 size, vec4 color, GLTexture* texture, Rect texrect);
@@ -74,10 +75,12 @@ void Renderer2D_DrawRotatedQuad(Renderer2D* inst, vec3 pos, vec2 size, float rot
 void Renderer2D_DrawRotatedQuad_s(Renderer2D* inst, vec3 pos, vec2 size, float rotation, vec4 color, SubTexture subtex);
 void Renderer2D_DrawQuad_t(Renderer2D* inst, mat4 transform, vec2 size, vec4 color, GLTexture* texture, Rect texrect);
 void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec2 size, vec4 tint, SubTexture subtex);
+void Renderer2D_DrawFilledRect(Renderer2D* inst, Rect rect, float z, vec4 color);
+void Renderer2D_DrawFilledRect_t(Renderer2D* inst, Rect rect, float z, vec4 color, SubTexture subtex);
 
 void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color);
 void Renderer2D_DrawRect(Renderer2D* inst, Rect rect, float z, vec4 color);
 void Renderer2D_DrawRect_t(Renderer2D* inst, mat4 transform, Rect rect, float z, vec4 color);
 
-void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fontSize, vec4 color, const char* text);
+void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fontSize, vec4 color, const char* text, bool flipVertical);
 vec2 Renderer2D_CalcTextSize(Renderer2D* inst, BitmapFont* font, float fontSize, vec4 color, const char* text);

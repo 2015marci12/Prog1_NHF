@@ -111,6 +111,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[SMOKE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Smoke_Fire.png"), new_uvec2(16, 16));
 		game->Textures[BG1_TEX] = TextureAtlas_create(LoadTex2D("Resources\\BG.png"), new_uvec2(550, 367));
 		game->Textures[ENEMIES_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Enemies.png"), new_uvec2(32, 16));
+		game->Textures[HUD_TEX] = TextureAtlas_create(LoadTex2D("Resources\\HudIcons.png"), new_uvec2(32, 32));
 
 		//Load font.
 		game->font = LoadBitmapFont("Resources\\@Malgun Gothic.bff", true);
@@ -185,6 +186,8 @@ Game* InitGame(Game* game, SDL_Window* window)
 		pc->shootingTimer = MakeTimer();
 		pc->boosterParticleTimer = MakeTimer();
 		pc->selected_weapon = 0;
+		pc->BombAmmo = 10;
+		pc->MissileAmmo = 5;
 
 		pcoll->body = new_Rect(-0.5f, -0.2f, 1.f, 0.4f);
 		pcoll->categoryBits = Layer_Player;
@@ -308,7 +311,6 @@ void RenderGame(Game* game, Renderer2D* renderer)
 	}
 
 	DebugDrawColloiders(game->scene, renderer);
-	Renderer2D_DrawText(renderer, new_vec3(0.f, 0.f, 100.f), game->font, 1.f, new_vec4_v(1.f), "Hello,\nworld!");
 
 	Renderer2D_EndScene(renderer);
 
@@ -434,9 +436,84 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 
 	mat4 view = mat4_Ortho(0, w, 0, h, 30, -30);
 	Renderer2D_BeginScene(renderer, view);
+	Renderer2D_ClearDepth(renderer);
 
 	char buff[256]; //Buffer to format the displayed text with.
 
+	const float margin = 50.f;
+	const float fontSize = 50.f;
+
+	//HealthBar.
+	const float barLength = 300.f;
+	vec4 green = new_vec4(0.f, 1.f, 0.f, 1.f);
+	vec4 red = new_vec4(1.f, 0.f, 0.f, 1.f);
+	float healthFraction = (health->health / health->max_health);
+	vec4 healthColor = vec4_Add(vec4_Mul_s(green, healthFraction), vec4_Mul_s(red, 1.f - healthFraction));
+
+	Renderer2D_DrawFilledRect(renderer, new_Rect(margin, margin, barLength, 50.f), 1.f, new_vec4(0.5f, 0.5f, 0.5f, 1.f));
+	Renderer2D_DrawFilledRect(renderer, new_Rect(margin, margin, barLength * healthFraction, 50.f), 0.f, healthColor);
+	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin - 65.f, margin + 100.f, 150.f, -150.f), -1.f, new_vec4_v(1.f),
+		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(0, 2), new_uvec2(1, 1)));
+	Renderer2D_DrawText(renderer, new_vec3(barLength + fontSize * 0.5f + margin, margin + 25.f, 0.f), game->font, fontSize, new_vec4_v(1.f), "Health", true);
+
+	//FuelBar.
+	vec4 FuelBarColor = new_vec4(1.f, 0.7f, 0.f, 1.f);
+	float fuelFraction = pc->fuel / pc->max_fuel;
+	const float spaceBetweenBars = 80.f;
+
+	Renderer2D_DrawFilledRect(renderer, new_Rect(margin, margin + spaceBetweenBars, barLength, 50.f), 1.f, new_vec4(0.5f, 0.5f, 0.5f, 1.f));
+	Renderer2D_DrawFilledRect(renderer, new_Rect(margin, margin + spaceBetweenBars, barLength * fuelFraction, 50.f), 0.f, FuelBarColor);
+	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin - 50.f, margin + 75.f + spaceBetweenBars, 100.f, -100.f), -1.f, new_vec4_v(1.f),
+		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(1, 2), new_uvec2(1, 1)));
+	Renderer2D_DrawText(renderer, new_vec3(barLength + fontSize * 0.5f + margin, margin + 25.f + spaceBetweenBars, 0.f), game->font, fontSize, new_vec4_v(1.f), "Fuel", true);
+	
+	//Score counter.
+	snprintf(buff, 256, "Score: %llu", game->score);
+	float x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
+	Renderer2D_DrawText(renderer, new_vec3(x, margin, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
+
+	//Wave counter.
+	snprintf(buff, 256, "Wave: %u", game->Wave);
+	x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
+	Renderer2D_DrawText(renderer, new_vec3(x, margin + 50, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
+
+	//Weapon selection.
+	
+	//Cannon.
+	const float CannonStartY = spaceBetweenBars + margin + 80.f;
+	if (pc->selected_weapon == 0)
+	{
+		//Selection.
+		Renderer2D_DrawFilledRect(renderer, new_Rect(margin, CannonStartY, 270, 50), 1.f, new_vec4(0.5f, 0.5f, 0.6f, 0.2f));
+	}
+	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin, CannonStartY + 50, 50, -50), 0.f, new_vec4_v(1.f), 
+		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(0, 0), new_uvec2(1, 1)));
+	snprintf(buff, 256, "Cannon");
+	Renderer2D_DrawText(renderer, new_vec3(margin + 70.f, CannonStartY + fontSize * 0.5f, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
+
+	//Missiles.
+	const float MissilesStartY = CannonStartY + 50.f;
+	if (pc->selected_weapon == 1)
+	{
+		//Selection.
+		Renderer2D_DrawFilledRect(renderer, new_Rect(margin, MissilesStartY, 270, 50), 1.f, new_vec4(0.5f, 0.5f, 0.6f, 0.2f));
+	}
+	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin, MissilesStartY + 50, 50, -50), 0.f, new_vec4_v(1.f),
+		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(1, 1), new_uvec2(1, 1)));
+	snprintf(buff, 256, "Missiles: %u", pc->MissileAmmo);
+	Renderer2D_DrawText(renderer, new_vec3(margin + 70.f, MissilesStartY + fontSize * 0.5f, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
+	
+	//Bombs.
+	const float BombStartY = MissilesStartY + 50.f;
+	if (pc->selected_weapon == 2)
+	{
+		//Selection.
+		Renderer2D_DrawFilledRect(renderer, new_Rect(margin, BombStartY, 270, 50), 1.f, new_vec4(0.5f, 0.5f, 0.6f, 0.2f));
+	}
+	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin, BombStartY + 50, 50, -50), 0.f, new_vec4_v(1.f),
+		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(0, 1), new_uvec2(1, 1)));
+	snprintf(buff, 256, "Bombs: %u", pc->BombAmmo);
+	Renderer2D_DrawText(renderer, new_vec3(margin + 70.f, BombStartY + fontSize * 0.5f, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
 
 	Renderer2D_EndScene(renderer, view);
 }

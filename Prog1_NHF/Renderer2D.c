@@ -305,6 +305,12 @@ void Renderer2D_Clear(Renderer2D* inst, vec4 color)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+void Renderer2D_ClearDepth(Renderer2D* inst)
+{
+	ASSERT(inst, "Renderer functions cannot work without an instance!");
+	glClear(GL_DEPTH_BUFFER_BIT);
+}
+
 void Renderer2D_SetLineWidth(Renderer2D* inst, float width)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
@@ -434,6 +440,17 @@ void Renderer2D_DrawSprite(Renderer2D* inst, mat4 transform, vec2 size, vec4 tin
 	Renderer2D_DrawQuad_t(inst, transform, size, tint, subtex.texture, subtex.texRect);
 }
 
+void Renderer2D_DrawFilledRect(Renderer2D* inst, Rect rect, float z, vec4 color)
+{
+	Renderer2D_DrawFilledRect_t(inst, rect, z, color, SubTexture_empty());
+}
+
+void Renderer2D_DrawFilledRect_t(Renderer2D* inst, Rect rect, float z, vec4 color, SubTexture subtex)
+{
+	vec3 Pos = new_vec3_v2(vec2_Add(rect.Pos, vec2_Mul_s(rect.Size, 0.5f)), z);
+	Renderer2D_DrawQuad_s(inst, Pos, rect.Size, color, subtex);
+}
+
 void Renderer2D_DrawLine(Renderer2D* inst, vec3 a, vec3 b, vec4 color)
 {
 	ASSERT(inst, "Renderer functions cannot work without an instance!");
@@ -485,15 +502,16 @@ void Renderer2D_DrawRect_t(Renderer2D* inst, mat4 transform, Rect rect, float z,
 	}
 }
 
-void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fontSize, vec4 color, const char* text)
+void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fontSize, vec4 color, const char* text, bool flipVertical)
 {
 	vec3 offset = pos;
+	float verticalMult = flipVertical ? -1.f : 1.f;
 	char* str = text;
 	while (*str)
 	{
 		if (*str == '\n')
 		{
-			offset.y -= fontSize * 1.1f;
+			offset.y -= fontSize * 1.1f * verticalMult;
 			offset.x = pos.x;
 		}
 		else
@@ -501,6 +519,7 @@ void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fon
 			vec2 size;
 			float advance;
 			SubTexture tex = FontGetChar(font, fontSize, *str, &size, &advance);
+			size.y *= verticalMult;
 			Renderer2D_DrawQuad_s(inst, offset, size, color, tex);
 			offset.x += advance;
 		}

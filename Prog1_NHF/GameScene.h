@@ -24,6 +24,7 @@ typedef enum TextureAssets
 	SMOKE_TEX,
 	FONT_TEX,
 	ENEMIES_TEX,
+	HUD_TEX,
 
 	TEX_COUNT,
 } TextureAssets;
@@ -92,6 +93,7 @@ typedef struct Game
 {
 	DiffConfig constants;
 	uint64_t score;
+	uint32_t Wave;
 	Scene_t* scene;
 	SDL_Window* window;
 
