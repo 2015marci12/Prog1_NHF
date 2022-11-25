@@ -49,6 +49,7 @@ void SpawnFloorCeilingTile(Game* game, float scale, float x)
 
 void SetupWalls(Game* game)
 {
+	//Ground and ceiling sprites.
 	float scale = 3.f;
 	for (float x = -game->constants.arena_width / 2.f - scale * 10.f; x < game->constants.arena_width / 2 + scale * 10.f; x += scale)
 	{
@@ -81,6 +82,40 @@ void SetupWalls(Game* game)
 	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, game->constants.arena_height / 2 + scale * 1.f, 0.f));
 
 	colloider->body = new_Rect(-game->constants.arena_width / 2, -scale, game->constants.arena_width, scale * 2.f);
+	colloider->maskBits = COLLISIONMASK_WALL;
+	colloider->categoryBits = Layer_Walls;
+	colloider->groupIndex = 0;
+
+	physics->inv_mass = 0.f;
+	physics->mass = 0.f;
+	physics->restitution = 1.f;
+
+	//Left wall.
+	entity_t leftwall = Scene_CreateEntity(game->scene);
+	transform = Scene_AddComponent(game->scene, leftwall, Component_TRANSFORM);
+	colloider = Scene_AddComponent(game->scene, leftwall, Component_COLLOIDER);
+	physics = Scene_AddComponent(game->scene, leftwall, Component_PHYSICS);
+
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(-game->constants.arena_width / 2, 0.f, 0.f));
+
+	colloider->body = new_Rect(-scale, -game->constants.arena_height / 2, scale, game->constants.arena_height);
+	colloider->maskBits = COLLISIONMASK_WALL;
+	colloider->categoryBits = Layer_Walls;
+	colloider->groupIndex = 0;
+
+	physics->inv_mass = 0.f;
+	physics->mass = 0.f;
+	physics->restitution = 1.f;
+
+	//Right wall.
+	entity_t rightwall = Scene_CreateEntity(game->scene);
+	transform = Scene_AddComponent(game->scene, rightwall, Component_TRANSFORM);
+	colloider = Scene_AddComponent(game->scene, rightwall, Component_COLLOIDER);
+	physics = Scene_AddComponent(game->scene, rightwall, Component_PHYSICS);
+
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(game->constants.arena_width / 2, 0.f, 0.f));
+
+	colloider->body = new_Rect(scale, -game->constants.arena_height / 2, -scale, game->constants.arena_height);
 	colloider->maskBits = COLLISIONMASK_WALL;
 	colloider->categoryBits = Layer_Walls;
 	colloider->groupIndex = 0;
@@ -400,7 +435,7 @@ void GameUpdateCamera(Game* game, InputState* input)
 	SDL_GetWindowSize(game->window, &w, &h);
 	float aspect = (float)w / (float)h;
 	float clampDist_h = (game->constants.arena_height - 2.f * game->constants.viewport_scale) / 2 + 3.f;
-	float clampDist_w = (game->constants.arena_width - 2.f * aspect * game->constants.viewport_scale) / 2 + 2.f;
+	float clampDist_w = (game->constants.arena_width - 2.f * aspect * game->constants.viewport_scale) / 2;
 	Pos.y = clamp(-clampDist_h, clampDist_h, Pos.y);
 	Pos.x = clamp(-clampDist_w, clampDist_w, Pos.x);
 
