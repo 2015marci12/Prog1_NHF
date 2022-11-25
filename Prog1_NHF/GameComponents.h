@@ -94,16 +94,8 @@ typedef struct MissileLauncherAI
 void RegisterMissileLaunchers(Scene_t* scene);
 void UpdateMissileLaunchers(Game* game, float dt);
 
-typedef enum FighterState 
-{
-	Fighter_IDLE,
-	Fighter_ATTACKING,
-	Fighter_FLEEING,
-} FighterState;
-
 typedef struct FighterAI 
 {
-	FighterState state;
 	Timer_t reloadTimer;
 	int burstCounter;
 } FighterAI;
@@ -127,7 +119,7 @@ typedef struct PowerupComponent
 void RegisterProjectile(Scene_t* scene);
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
 
-void SpawnGunTurret(Game* game, vec2 Pos, bool flip);
+void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret);
 void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck);
 void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage, entity_t target);
 

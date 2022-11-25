@@ -636,7 +636,7 @@ void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 	}
 }
 
-void SpawnGunTurret(Game* game, vec2 Pos, bool flip)
+void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 {
 	entity_t building = Scene_CreateEntity(game->scene);
 
@@ -647,7 +647,9 @@ void SpawnGunTurret(Game* game, vec2 Pos, bool flip)
 	Sprite* sprite = Scene_AddComponent(game->scene, building, Component_SPRITE);
 	*sprite = Sprite_init();
 	sprite->size = new_vec2(2.f, 1.f);
-	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 1), new_uvec2_v(1));
+	sprite->subTex = MissileTurret ?
+		TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 0), new_uvec2_v(1)) :
+		TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 1), new_uvec2_v(1));
 	sprite->tintColor = new_vec4_v(1.f);
 
 	Colloider* coll = Scene_AddComponent(game->scene, building, Component_COLLOIDER);
@@ -667,18 +669,27 @@ void SpawnGunTurret(Game* game, vec2 Pos, bool flip)
 
 	entity_t turret = Scene_CreateEntity(game->scene);
 
-	AddChild(game->scene, building, turret);
+	if (!MissileTurret) 
+	{
+		//Add a gun turret if this is not a missile launcher.
+		AddChild(game->scene, building, turret);
 
-	transform = Scene_AddComponent(game->scene, turret, Component_TRANSFORM);
-	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.3f, -2.f));
+		transform = Scene_AddComponent(game->scene, turret, Component_TRANSFORM);
+		*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, 0.3f, -2.f));
 
-	sprite = Scene_AddComponent(game->scene, turret, Component_SPRITE);
-	*sprite = Sprite_init();
-	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 7), new_uvec2(1, 1));
-	sprite->size = new_vec2(2.f, 1.f);
+		sprite = Scene_AddComponent(game->scene, turret, Component_SPRITE);
+		*sprite = Sprite_init();
+		sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 7), new_uvec2(1, 1));
+		sprite->size = new_vec2(2.f, 1.f);
 
-	GunTurretAI* AI = Scene_AddComponent(game->scene, turret, Component_GunTurretAI);
-	AI->reloadTimer = MakeTimer();
+		GunTurretAI* AI = Scene_AddComponent(game->scene, turret, Component_GunTurretAI);
+		AI->reloadTimer = MakeTimer();
+	}
+	else 
+	{
+		MissileLauncherAI* missilelauncher = Scene_AddComponent(game->scene, building, Component_MissileLauncer);
+		missilelauncher->realoadTimer = MakeTimer();
+	}
 }
 
 void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
