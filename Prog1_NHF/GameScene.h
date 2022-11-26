@@ -85,6 +85,7 @@ typedef enum AlliegenceGroup
 typedef struct InputState
 {
 	vec2 LookDir;
+	vec2 MousePos;
 	float Thrust;
 	bool booster;
 	bool firing;
@@ -135,3 +136,5 @@ void GameRenderGui(Game* game, Renderer2D* renderer);
 void GameOverCallBack(entity_t player, void* game);
 void EnemyDestroyedCallBack(entity_t enemy, void* game);
 void BonusEnemyDestroyedCallBack(entity_t enemy, void* game);
+
+void SpawnNextWave(Game* game);

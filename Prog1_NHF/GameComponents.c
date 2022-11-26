@@ -180,8 +180,9 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 	SDL_GetWindowSize(game->window, &w, &h);
 	float aspect = (float)w / (float)h;
 	vec2 correction = vec2_Div(new_vec2_v3(vec3_Sub(CamPos, Pos)),
-		new_vec2(aspect * game->constants.viewport_scale, game->constants.viewport_scale));
-	vec2 trueLookVec = vec2_Add(vec2_Mul_s(input->LookDir, input->Thrust), correction);
+		new_vec2(game->constants.viewport_scale / ((float)h / 2), game->constants.viewport_scale / ((float)h / 2)));
+	vec2 trueLookVec = vec2_Normalize(vec2_Add(input->MousePos, correction));
+	
 
 	//Look at mouse.
 	float angle = vec2_Angle(trueLookVec);
@@ -1031,7 +1032,7 @@ void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float dama
 	movement->velocity = new_vec2_v(0.f);
 
 	ProjectileComponent* proj = Scene_AddComponent(game->scene, missile, Component_PROJECTILE);
-	proj->damage = game->constants.missile_damage_enemy;
+	proj->damage = damage;
 	proj->type = MISSILE;
 
 	MissileGuidanceComponent* seeker = Scene_AddComponent(game->scene, missile, Component_MissileGuidance);

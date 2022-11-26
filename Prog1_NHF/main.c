@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
 	window = SDL_CreateWindow("SDL peldaprogram",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		660, 480,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN_DESKTOP);
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE );
 
 	if (window == NULL)
 	{

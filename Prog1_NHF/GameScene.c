@@ -11,6 +11,7 @@ void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* inpu
 	vec2 mouseDiff = ivec2_to_vec2(ivec2_Sub(mousePos, screenCenter));
 	mouseDiff.y *= -1.f;
 	input->LookDir = vec2_Normalize(mouseDiff);
+	input->MousePos = mouseDiff;
 	input->Thrust = max(0.f, min(vec2_Len(mouseDiff) / (float)ivec2_Min(screenCenter), 1.f));
 
 	//Buttons.
@@ -273,10 +274,8 @@ Game* InitGame(Game* game, SDL_Window* window)
 		//Walls
 		SetupWalls(game);
 
-		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, true, true);
-		SpawnTurret(game, new_vec2(-10.f, -game->constants.arena_height * 0.5f + 0.5f), false, false, false);
-		SpawnTurret(game, new_vec2(5.f, game->constants.arena_height * 0.5f - 0.5f), true, true, true);
-		SpawnRadar(game, new_vec2(-5.f, game->constants.arena_height * 0.5f - 0.5f), true, false);
+		SpawnNextWave(game);
+		game->score = 0;
 	}
 	return game;
 }
@@ -423,7 +422,7 @@ bool GameOnMouseRelease(SDL_Event* e, void* userData)
 	SDL_MouseButtonEvent* ev = e;
 	Game* game = userData;
 
-	if (ev->button == SDL_BUTTON_LEFT) 
+	if (ev->button == SDL_BUTTON_LEFT)
 	{
 		//Set release trigger for the player.
 		View_t Player = View_Create(game->scene, 1, Component_PLAYER);
@@ -479,11 +478,11 @@ void GameRenderBackground(Game* game, Renderer2D* renderer)
 		TextureAtlas_SubTexture(&game->Textures[BG1_TEX], new_uvec2(0, 0), new_uvec2(1, 1)));
 }
 
-void GetEnemyDirections(Game* game, vec2 PlayerPos, bool* left, bool* right) 
+void GetEnemyDirections(Game* game, vec2 PlayerPos, bool* left, bool* right)
 {
 	if (!left || !right) return;
 	for (View_t v = View_Create(game->scene, 2, Component_TRANSFORM, Component_EnemyTag);
-		!View_End(&v); View_Next(&v)) 
+		!View_End(&v); View_Next(&v))
 	{
 		mat4* transform = View_GetComponent(&v, 0);
 		vec2 EnemyPos;
@@ -491,7 +490,7 @@ void GetEnemyDirections(Game* game, vec2 PlayerPos, bool* left, bool* right)
 
 		*left |= EnemyPos.x < PlayerPos.x;
 		*right |= EnemyPos.x > PlayerPos.x;
-		
+
 		if (*left && *right) return;
 	}
 }
@@ -509,8 +508,11 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 
 	int w, h;
 	SDL_GetWindowSize(game->window, &w, &h);
+	float aspect = (float)w / (float)h;
+	w = aspect * 1080.f;
+	h = 1080.f;
 
-	mat4 view = mat4_Ortho(0, w, 0, h, 30, -30);
+	mat4 view = mat4_Ortho(0, aspect * 1080.f, 0, 1080.f, 30, -30);
 	Renderer2D_BeginScene(renderer, view);
 	Renderer2D_ClearDepth(renderer);
 
@@ -542,7 +544,7 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin - 50.f, margin + 75.f + spaceBetweenBars, 100.f, -100.f), -1.f, new_vec4_v(1.f),
 		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(1, 2), new_uvec2(1, 1)));
 	Renderer2D_DrawText(renderer, new_vec3(barLength + fontSize * 0.5f + margin, margin + 25.f + spaceBetweenBars, 0.f), game->font, fontSize, new_vec4_v(1.f), "Fuel", true);
-	
+
 	//Score counter.
 	snprintf(buff, 256, "Score: %llu", game->score);
 	float x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
@@ -563,16 +565,16 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 	GetEnemyDirections(game, PlayerPos, &left, &right);
 
 	x = w - margin - 200;
-	if (left) 
+	if (left)
 		Renderer2D_DrawFilledRect_t(renderer, new_Rect(x, margin + 150, 100, 100), 0.f, new_vec4_v(1.f),
 			TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(1, 3), new_uvec2(1, 1)));
 	x += 100;
-	if (right) 
+	if (right)
 		Renderer2D_DrawFilledRect_t(renderer, new_Rect(x, margin + 150, 100, 100), 0.f, new_vec4_v(1.f),
 			TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(0, 3), new_uvec2(1, 1)));
 
 	//Weapon selection.
-	
+
 	//Cannon.
 	const float CannonStartY = spaceBetweenBars + margin + 80.f;
 	if (pc->selected_weapon == 0)
@@ -580,7 +582,7 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 		//Selection.
 		Renderer2D_DrawFilledRect(renderer, new_Rect(margin, CannonStartY, 270, 50), 1.f, new_vec4(0.5f, 0.5f, 0.6f, 0.2f));
 	}
-	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin, CannonStartY + 50, 50, -50), 0.f, new_vec4_v(1.f), 
+	Renderer2D_DrawFilledRect_t(renderer, new_Rect(margin, CannonStartY + 50, 50, -50), 0.f, new_vec4_v(1.f),
 		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(0, 0), new_uvec2(1, 1)));
 	snprintf(buff, 256, "Cannon");
 	Renderer2D_DrawText(renderer, new_vec3(margin + 70.f, CannonStartY + fontSize * 0.5f, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
@@ -596,7 +598,7 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 		TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(1, 1), new_uvec2(1, 1)));
 	snprintf(buff, 256, "Missiles: %u", pc->MissileAmmo);
 	Renderer2D_DrawText(renderer, new_vec3(margin + 70.f, MissilesStartY + fontSize * 0.5f, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
-	
+
 	//Bombs.
 	const float BombStartY = MissilesStartY + 50.f;
 	if (pc->selected_weapon == 2)
@@ -621,8 +623,10 @@ void GameOverCallBack(entity_t player, void* game)
 void EnemyDestroyedCallBack(entity_t enemy, void* game)
 {
 	Game* g = game;
-	g->EnemyCount--;
-	//TODO spawn next wave.
+	if (--g->EnemyCount == 0)
+	{
+		SpawnNextWave(g);
+	}
 }
 
 void BonusEnemyDestroyedCallBack(entity_t enemy, void* game)
@@ -634,4 +638,35 @@ void BonusEnemyDestroyedCallBack(entity_t enemy, void* game)
 	bool spawn = RandB_Chance(g->constants.powerup_chance);
 	PowerupType type = RandUI32_Range(0, POWERUP_MAX - 1);
 	if (spawn) SpawnPowerup(g, *Transform, type);
+}
+
+void SpawnNextWave(Game* game)
+{
+	uint32_t enemy_count = powf(game->constants.wave_scaling, game->Wave) * 4;
+
+	for (int i = 0; i < enemy_count; i++)
+	{
+		int type = RandUI32_Range(0, 2);
+		bool Upgrade = RandB_Chance(0.2f);
+		bool OtherType = RandB_Chance(0.5f);
+		float X_Pos = RandF_1_Range(-game->constants.arena_width / 2, game->constants.arena_width / 2);
+		bool TopOrBottom = RandB();
+		float Y_Pos = TopOrBottom ? game->constants.arena_height / 2 - 0.5f : -game->constants.arena_height / 2 + 0.5f;
+		switch (type)
+		{
+		case 0:
+			SpawnRadar(game, new_vec2(X_Pos, Y_Pos), TopOrBottom, Upgrade);
+			break;
+		case 1:
+			SpawnTurret(game, new_vec2(X_Pos, Y_Pos), TopOrBottom, OtherType, Upgrade);
+			break;
+		case 2:
+			SpawnTank(game, new_vec2(X_Pos, Y_Pos), TopOrBottom, OtherType, Upgrade);
+			//TODO Fighter enemies.
+		default:
+			break;
+		}
+	}
+	game->Wave++;
+	game->score += enemy_count * 30;
 }
