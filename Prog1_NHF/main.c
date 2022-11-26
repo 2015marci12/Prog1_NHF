@@ -7,6 +7,8 @@
 
 #include "GameScene.h"
 #include "MainMenuScene.h"
+#include "LeaderBoardScene.h"
+#include "ScoreSubmissionScene.h"
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
@@ -14,6 +16,8 @@
 SDL_Window* window;
 Game game;
 MainMenu menu;
+LeaderBoard leaderboard;
+ScoreSubmissionScene scoresubmit;
 uint64_t latestScore;
 uint32_t latestWave;
 
@@ -44,6 +48,7 @@ typedef enum CurrentScene
 	SCENE_NONE = 0,
 	SCENE_GAME,
 	SCENE_MAINMENU,
+	SCENE_LEADERBOARD,
 	SCENE_SETTINGS,
 	SCENE_CREDITS,
 	SCENE_SCORESUBMIT,
@@ -60,12 +65,17 @@ void SwitchScenes(CurrentScene newScene)
 		CleanupGame(&game);
 		break;
 	case SCENE_MAINMENU:
+		CleanupMenu(&menu);
+		break;
+	case SCENE_LEADERBOARD:
+		CleanupLeaderBoard(&leaderboard);
 		break;
 	case SCENE_SETTINGS:
 		break;
 	case SCENE_CREDITS:
 		break;
 	case SCENE_SCORESUBMIT:
+		CleanupScoreSubmission(&scoresubmit);
 		break;
 	default:
 		break;
@@ -79,12 +89,17 @@ void SwitchScenes(CurrentScene newScene)
 		InitGame(&game, window);
 		break;
 	case SCENE_MAINMENU:
+		InitMenu(&menu, window);
+		break;
+	case SCENE_LEADERBOARD:
+		InitLeaderBoard(&leaderboard);
 		break;
 	case SCENE_SETTINGS:
 		break;
 	case SCENE_CREDITS:
 		break;
 	case SCENE_SCORESUBMIT:
+		InitScoreSubmission(&scoresubmit, latestScore, latestWave, window);
 		break;
 	default:
 		break;
@@ -108,12 +123,16 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 			DispatchGameEvents(&game, &ev);
 			break;
 		case SCENE_MAINMENU:
+			MenuDispatchEvents(&ev, &menu);
+			break;
+		case SCENE_LEADERBOARD:
 			break;
 		case SCENE_SETTINGS:
 			break;
 		case SCENE_CREDITS:
 			break;
 		case SCENE_SCORESUBMIT:
+			DispatchEventsScoreSubmission(&ev, &scoresubmit);
 			break;
 		default:
 			break;
@@ -144,12 +163,46 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 		}
 		break;
 	case SCENE_MAINMENU:
+		RenderMenu(&menu, renderer);
+
+		if (menu.clicked) 
+		{
+			switch (menu.selected)
+			{
+			case STARTGAME:
+				nextScene = SCENE_GAME;
+				break;
+			case LEADERBOARD:
+				nextScene = SCENE_LEADERBOARD;
+				break;
+			case SETTINGS:
+				nextScene = SCENE_SETTINGS;
+				break;
+			case CREDITS:
+				nextScene = SCENE_CREDITS;
+				break;
+			case QUIT:
+				*exit = true;
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	case SCENE_LEADERBOARD:
 		break;
 	case SCENE_SETTINGS:
 		break;
 	case SCENE_CREDITS:
 		break;
 	case SCENE_SCORESUBMIT:
+		RenderScoreSubmission(&scoresubmit, renderer);
+
+		if (scoresubmit.next) 
+		{
+			SaveScoreToLeaderBoard(scoresubmit.score);
+			nextScene = SCENE_MAINMENU;
+		}
 		break;
 	default:
 		break;
@@ -203,7 +256,7 @@ int main(int argc, char* argv[])
 	GLEnableDebugOutput();
 
 	//Load game scene.
-	SwitchScenes(SCENE_GAME);
+	SwitchScenes(SCENE_MAINMENU);
 
 	//Init renderer.
 	Renderer2D renderer;

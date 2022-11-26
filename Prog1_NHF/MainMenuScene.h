@@ -8,6 +8,8 @@
 #include "Input.h"
 #include "Timer.h"
 
+#include <SDL2/SDL.h>
+
 typedef enum MenuOptions 
 {
 	STARTGAME,
@@ -15,6 +17,7 @@ typedef enum MenuOptions
 	SETTINGS,
 	CREDITS,
 	QUIT,
+	MenuOptions_MAX,
 } MenuOptions;
 
 typedef struct MainMenu 
@@ -24,6 +27,15 @@ typedef struct MainMenu
 
 	SDL_Window* window;
 	BitmapFont* font;
+	TextureAtlas BG;
 } MainMenu;
 
-static void InitMenu() {};
+MainMenu* InitMenu(MainMenu* menu, SDL_Window* window);
+void CleanupMenu(MainMenu* menu);
+
+bool MenuKeyDown(SDL_Event* e, const void* data);
+bool MenuMouseDown(SDL_Event* e, const void* data);
+
+void MenuDispatchEvents(EventDispatcher_t* ev, MainMenu* menu);
+
+void RenderMenu(MainMenu* menu, Renderer2D* renderer);

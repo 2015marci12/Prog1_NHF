@@ -69,6 +69,15 @@
     <ClCompile Include="BitmapFont.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MainMenuScene.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LeaderBoardScene.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreSubmissionScene.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -138,6 +147,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MainMenuScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LeaderBoardScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ScoreSubmissionScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -83,4 +83,4 @@ void Renderer2D_DrawRect(Renderer2D* inst, Rect rect, float z, vec4 color);
 void Renderer2D_DrawRect_t(Renderer2D* inst, mat4 transform, Rect rect, float z, vec4 color);
 
 void Renderer2D_DrawText(Renderer2D* inst, vec3 pos, BitmapFont* font, float fontSize, vec4 color, const char* text, bool flipVertical);
-vec2 Renderer2D_CalcTextSize(Renderer2D* inst, BitmapFont* font, float fontSize, vec4 color, const char* text);
+vec2 Renderer2D_CalcTextSize(Renderer2D* inst, BitmapFont* font, float fontSize, const char* text);

@@ -44,7 +44,7 @@ void MovePlanes(Game* game, float dt)
 	}
 }
 
-bool SpawnSmoke(Scene_t* scene, entity_t e, const void* d)
+bool SpawnSmoke(Scene_t* scene, entity_t e, void* d)
 {
 	Game* game = d;
 	mat4* transform = Scene_Get(game->scene, e, Component_TRANSFORM);
@@ -104,9 +104,6 @@ void SpawnBomb(Game* game, mat4* transform, MovementComponent* mc)
 {
 	entity_t bomb = Scene_CreateEntity(game->scene);
 
-	vec2 forward = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(1.f, 0.f, 0.f, 1.f)));
-	vec3 pos = new_vec3_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
-	vec2 direction = vec2_Normalize(vec2_Sub(forward, new_vec2_v3(pos)));
 	mat4* bombtransform = Scene_AddComponent(game->scene, bomb, Component_TRANSFORM);
 	*bombtransform = mat4_Translate(*transform, new_vec3(0.f, -0.1f, 0.f));
 
@@ -503,7 +500,7 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 		{
 			*Transform = mat4_Rotate(*Transform, AngleDiff, new_vec3(0.f, 0.f, 1.f));
 			AI->reloadTimer = MakeTimer();
-			MovementComponent dummyMc;
+			MovementComponent dummyMc = { 0 };
 			dummyMc.acceleration = new_vec2_v(0.f);
 			dummyMc.velocity = new_vec2_v(0.f);
 
@@ -535,13 +532,13 @@ void ResolveCollisionPowerup(Game* game, entity_t a, entity_t b)
 			b_health->health = min(b_health->max_health, b_health->health + game->constants.powerup_health);
 			break;
 		case MISSILES:
-			b_player->MissileAmmo += game->constants.powerup_missiles;
+			b_player->MissileAmmo += (uint32_t)game->constants.powerup_missiles;
 			break;
 		case BOMBS:
-			b_player->BombAmmo += game->constants.powerup_bombs;
+			b_player->BombAmmo += (uint32_t)game->constants.powerup_bombs;
 			break;
 		case SCORE:
-			game->score += game->constants.powerup_score;
+			game->score += (uint64_t)game->constants.powerup_score;
 			break;
 		default:
 			break;
@@ -556,13 +553,13 @@ void ResolveCollisionPowerup(Game* game, entity_t a, entity_t b)
 			a_health->health = min(a_health->max_health, a_health->health + game->constants.powerup_health);
 			break;
 		case MISSILES:
-			a_player->MissileAmmo += game->constants.powerup_missiles;
+			a_player->MissileAmmo += (uint32_t)game->constants.powerup_missiles;
 			break;
 		case BOMBS:
-			a_player->BombAmmo += game->constants.powerup_bombs;
+			a_player->BombAmmo += (uint32_t)game->constants.powerup_bombs;
 			break;
 		case SCORE:
-			game->score += game->constants.powerup_score;
+			game->score += (uint64_t)game->constants.powerup_score;
 			break;
 		default:
 			break;
@@ -710,7 +707,6 @@ void UpdateMissileLaunchers(Game* game, float dt)
 	entity_t player = View_GetCurrent(&PlayerView);
 
 	mat4 PlayerTransform = *(mat4*)Scene_Get(game->scene, player, Component_TRANSFORM);
-	MovementComponent PlayerMovement = *(MovementComponent*)Scene_Get(game->scene, player, Component_MOVEMENT);
 
 	vec2 PlayerPos = new_vec2_v4(mat4x4_Mul_v(PlayerTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 
@@ -865,7 +861,7 @@ void SpawnRadar(Game* game, vec2 Pos, bool flip, bool upgrade)
 	health->health = game->constants.structure_health * upgradeMultiplier;
 	health->invincibility_time = 0.1f;
 	health->max_health = game->constants.structure_health * upgradeMultiplier;
-	health->score = game->constants.structure_score * upgradeMultiplier;
+	health->score = (uint64_t)(game->constants.structure_score * upgradeMultiplier);
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
 	health->cb = game->BonusEnemyDestroyedCB;
@@ -907,7 +903,7 @@ void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret, bool upgra
 	health->health = game->constants.structure_health * upgradeMultiplier;
 	health->invincibility_time = 0.1f;
 	health->max_health = game->constants.structure_health * upgradeMultiplier;
-	health->score = game->constants.structure_score * upgradeMultiplier;
+	health->score = (uint64_t)(game->constants.structure_score * upgradeMultiplier);
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
 	health->cb = game->EnemyDestroyedCB;
@@ -968,7 +964,7 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck, bool upgrade)
 	health->health = game->constants.vehicle_health * upgradeMultiplier;
 	health->invincibility_time = 0.1f;
 	health->max_health = game->constants.vehicle_health * upgradeMultiplier;
-	health->score = game->constants.vehicle_score * upgradeMultiplier;
+	health->score = (uint64_t)(game->constants.vehicle_score * upgradeMultiplier);
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
 	health->cb = game->EnemyDestroyedCB;

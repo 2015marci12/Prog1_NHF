@@ -419,7 +419,7 @@ bool GameOnCollision(SDL_Event* e, void* userData)
 bool GameOnMouseRelease(SDL_Event* e, void* userData)
 {
 	//Translate pointers.
-	SDL_MouseButtonEvent* ev = e;
+	SDL_MouseButtonEvent* ev = (SDL_MouseButtonEvent*)e;
 	Game* game = userData;
 
 	if (ev->button == SDL_BUTTON_LEFT)
@@ -509,8 +509,8 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 	int w, h;
 	SDL_GetWindowSize(game->window, &w, &h);
 	float aspect = (float)w / (float)h;
-	w = aspect * 1080.f;
-	h = 1080.f;
+	w = (int)(aspect * 1080.f);
+	h = 1080;
 
 	mat4 view = mat4_Ortho(0, aspect * 1080.f, 0, 1080.f, 30, -30);
 	Renderer2D_BeginScene(renderer, view);
@@ -547,17 +547,17 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 
 	//Score counter.
 	snprintf(buff, 256, "Score: %llu", game->score);
-	float x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
+	float x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize,  buff).x - margin;
 	Renderer2D_DrawText(renderer, new_vec3(x, margin, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
 
 	//Wave counter.
 	snprintf(buff, 256, "Wave: %u", game->Wave);
-	x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
+	x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, buff).x - margin;
 	Renderer2D_DrawText(renderer, new_vec3(x, margin + 50, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
 
 	//Enemy counter.
 	snprintf(buff, 256, "Enemies: %u", game->EnemyCount);
-	x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
+	x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize,  buff).x - margin;
 	Renderer2D_DrawText(renderer, new_vec3(x, margin + 100, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
 
 	//Enemy direction indicators.
@@ -611,7 +611,7 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 	snprintf(buff, 256, "Bombs: %u", pc->BombAmmo);
 	Renderer2D_DrawText(renderer, new_vec3(margin + 70.f, BombStartY + fontSize * 0.5f, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
 
-	Renderer2D_EndScene(renderer, view);
+	Renderer2D_EndScene(renderer);
 }
 
 void GameOverCallBack(entity_t player, void* game)
@@ -642,7 +642,7 @@ void BonusEnemyDestroyedCallBack(entity_t enemy, void* game)
 
 void SpawnNextWave(Game* game)
 {
-	uint32_t enemy_count = powf(game->constants.wave_scaling, game->Wave) * 4;
+	int enemy_count = (int)powf(game->constants.wave_scaling, (float)game->Wave) * 4;
 
 	for (int i = 0; i < enemy_count; i++)
 	{
@@ -668,5 +668,5 @@ void SpawnNextWave(Game* game)
 		}
 	}
 	game->Wave++;
-	game->score += enemy_count * 30;
+	game->score += (uint64_t)enemy_count * 30;
 }

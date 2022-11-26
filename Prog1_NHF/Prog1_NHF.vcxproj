@@ -29,13 +29,16 @@
     <ClCompile Include="GameScene.c" />
     <ClCompile Include="Graphics.c" />
     <ClCompile Include="Input.c" />
+    <ClCompile Include="LeaderBoardScene.c" />
     <ClCompile Include="LinearAllocator.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="MainMenuScene.c" />
     <ClCompile Include="mIni.c" />
     <ClCompile Include="ParticleSystem.c" />
     <ClCompile Include="PoolAllocator.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="Renderer2D.c" />
+    <ClCompile Include="ScoreSubmissionScene.c" />
     <ClCompile Include="Timer.c" />
   </ItemGroup>
   <ItemGroup>
@@ -52,6 +55,7 @@
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Container.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="LeaderBoardScene.h" />
     <ClInclude Include="LinearAllocator.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="MainMenuScene.h" />
@@ -61,6 +65,7 @@
     <ClInclude Include="PoolAllocator.h" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="Renderer2D.h" />
+    <ClInclude Include="ScoreSubmissionScene.h" />
     <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>

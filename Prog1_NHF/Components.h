@@ -146,12 +146,12 @@ void UpdateMovement(Scene_t* scene, float dt);
 /*
 * Lifetime.
 */
-typedef bool(*LifetimeCallback_t)(Scene_t* scene, entity_t e, const void* userdata);
+typedef bool(*LifetimeCallback_t)(Scene_t* scene, entity_t e, void* userdata);
 typedef struct LifetimeComponent
 {
 	Timer_t timer;
 	float lifetime;
-	const void* userdata;
+	void* userdata;
 
 	LifetimeCallback_t callback;
 } LifetimeComponent;
