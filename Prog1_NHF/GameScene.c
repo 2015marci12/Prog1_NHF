@@ -142,6 +142,10 @@ Game* InitGame(Game* game, SDL_Window* window)
 		LoadConfig(&game->constants, "Config.ini");
 		game->window = window;
 
+		game->EnemyDestroyedCB = EnemyDestroyedCallBack;
+		game->GameOverCB = GameOverCallBack;
+		game->BonusEnemyDestroyedCB = BonusEnemyDestroyedCallBack;
+
 		//Load assets.
 		game->Textures[PLAYER_TEX] = TextureAtlas_create(LoadTex2D("Resources\\jet.png"), new_uvec2(64, 32));
 		game->Textures[WEAPON_TEX] = TextureAtlas_create(LoadTex2D("Resources\\weapons.png"), new_uvec2(16, 16));
@@ -150,6 +154,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[SMOKE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Smoke_Fire.png"), new_uvec2(16, 16));
 		game->Textures[BG1_TEX] = TextureAtlas_create(LoadTex2D("Resources\\BG.png"), new_uvec2(550, 367));
 		game->Textures[ENEMIES_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Enemies.png"), new_uvec2(32, 16));
+		game->Textures[UPGRADE_TEX] = TextureAtlas_create(LoadTex2D("Resources\\UpgradedEnemies.png"), new_uvec2(32, 16));
 		game->Textures[HUD_TEX] = TextureAtlas_create(LoadTex2D("Resources\\HudIcons.png"), new_uvec2(32, 32));
 		game->Textures[BONUS_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Bonuses.png"), new_uvec2(32, 32));
 
@@ -246,7 +251,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		phealth->lastParticle = MakeTimer();
 		phealth->lastHit = MakeTimer();
 		phealth->score = 0;
-		phealth->cb = NULL;
+		phealth->cb = game->GameOverCB;
 
 		//Camera
 		int w, h;
@@ -268,10 +273,10 @@ Game* InitGame(Game* game, SDL_Window* window)
 		//Walls
 		SetupWalls(game);
 
-		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, true);
-		SpawnTurret(game, new_vec2(-10.f, -game->constants.arena_height * 0.5f + 0.5f), false, false);
-		SpawnTurret(game, new_vec2(5.f, game->constants.arena_height * 0.5f - 0.5f), true, true);
-		SpawnRadar(game, new_vec2(-5.f, game->constants.arena_height * 0.5f - 0.5f), true);
+		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, true, true);
+		SpawnTurret(game, new_vec2(-10.f, -game->constants.arena_height * 0.5f + 0.5f), false, false, false);
+		SpawnTurret(game, new_vec2(5.f, game->constants.arena_height * 0.5f - 0.5f), true, true, true);
+		SpawnRadar(game, new_vec2(-5.f, game->constants.arena_height * 0.5f - 0.5f), true, false);
 	}
 	return game;
 }
@@ -407,6 +412,7 @@ bool GameOnCollision(SDL_Event* e, void* userData)
 	//Game logic.
 	ResolveCollisionProjectiles(game, ev->a, ev->b);
 	ResolveCollisionWall(game, ev->a, ev->b);
+	ResolveCollisionPowerup(game, ev->a, ev->b);
 
 	return false;
 }
@@ -604,4 +610,28 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 	Renderer2D_DrawText(renderer, new_vec3(margin + 70.f, BombStartY + fontSize * 0.5f, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
 
 	Renderer2D_EndScene(renderer, view);
+}
+
+void GameOverCallBack(entity_t player, void* game)
+{
+	Game* g = game;
+	g->GameOver = true;
+}
+
+void EnemyDestroyedCallBack(entity_t enemy, void* game)
+{
+	Game* g = game;
+	g->EnemyCount--;
+	//TODO spawn next wave.
+}
+
+void BonusEnemyDestroyedCallBack(entity_t enemy, void* game)
+{
+	Game* g = game;
+	EnemyDestroyedCallBack(enemy, game);
+	mat4* Transform = Scene_Get(g->scene, enemy, Component_TRANSFORM);
+
+	bool spawn = RandB_Chance(g->constants.powerup_chance);
+	PowerupType type = RandUI32_Range(0, POWERUP_MAX - 1);
+	if (spawn) SpawnPowerup(g, *Transform, type);
 }

@@ -24,6 +24,7 @@ typedef enum TextureAssets
 	SMOKE_TEX,
 	FONT_TEX,
 	ENEMIES_TEX,
+	UPGRADE_TEX,
 	HUD_TEX,
 	BONUS_TEX,
 
@@ -130,3 +131,7 @@ void GameUpdateCamera(Game* game, InputState* input);
 
 void GameRenderBackground(Game* game, Renderer2D* renderer);
 void GameRenderGui(Game* game, Renderer2D* renderer);
+
+void GameOverCallBack(entity_t player, void* game);
+void EnemyDestroyedCallBack(entity_t enemy, void* game);
+void BonusEnemyDestroyedCallBack(entity_t enemy, void* game);

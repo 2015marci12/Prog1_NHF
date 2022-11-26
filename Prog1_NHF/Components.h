@@ -31,6 +31,7 @@ enum ComponentTypes
 	Component_MissileGuidance,
 	Component_MissileLauncer,
 	Component_BonusTowerAnim,
+	Component_PowerUp,
 
 	Component_EnemyTag,
 	Component_WallTag,

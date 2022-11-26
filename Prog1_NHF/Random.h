@@ -144,6 +144,7 @@ double RandD_3_Range(double min, double max);
 
 bool RandB();;
 bool RandB_Threshold(float threshold);
+bool RandB_Chance(float chance);
 
 int32_t RandI32();
 int32_t RandI32_Range(int32_t min, int32_t max);

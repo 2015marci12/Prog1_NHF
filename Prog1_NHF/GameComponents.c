@@ -391,13 +391,14 @@ void UpdateTankAIs(Game* game, float dt, entity_t player)
 	vec2 PlayerPos;
 	Transform_Decompose_2D(PlayerTransform, &PlayerPos, NULL, NULL);
 
-	for (View_t v = View_Create(game->scene, 4, Component_TRANSFORM, Component_MOVEMENT, Component_SPRITE, Component_TankAI);
+	for (View_t v = View_Create(game->scene, 5, Component_TRANSFORM, Component_MOVEMENT, Component_SPRITE, Component_TankAI, Component_EnemyTag);
 		!View_End(&v); View_Next(&v))
 	{
 		mat4* Transform = View_GetComponent(&v, 0);
 		MovementComponent* Movement = View_GetComponent(&v, 1);
 		Sprite* Sprite = View_GetComponent(&v, 2);
 		TankHullAI* AI = View_GetComponent(&v, 3);
+		EnemyTagComponent* tag = View_GetComponent(&v, 4);
 
 		vec2 Pos;
 		Transform_Decompose_2D(*Transform, &Pos, NULL, NULL);
@@ -416,7 +417,7 @@ void UpdateTankAIs(Game* game, float dt, entity_t player)
 		//Animation
 		if (AI->IsMissleTruck)
 		{
-			Sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 5), new_uvec2(1, 1));
+			Sprite->subTex = TextureAtlas_SubTexture(&game->Textures[tag->upgraded ? UPGRADE_TEX : ENEMIES_TEX], new_uvec2(0, 5), new_uvec2(1, 1));
 		}
 		else
 		{
@@ -428,8 +429,8 @@ void UpdateTankAIs(Game* game, float dt, entity_t player)
 
 			SubTexture directions[2] =
 			{
-				TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 7), new_uvec2(1, 1)),
-				TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(1, 7), new_uvec2(1, 1))
+				TextureAtlas_SubTexture(&game->Textures[tag->upgraded ? UPGRADE_TEX : ENEMIES_TEX], new_uvec2(0, 7), new_uvec2(1, 1)),
+				TextureAtlas_SubTexture(&game->Textures[tag->upgraded ? UPGRADE_TEX : ENEMIES_TEX], new_uvec2(1, 7), new_uvec2(1, 1))
 			};
 
 			Sprite->subTex = directions[((Dir.x <= 0.f) ^ (Diff.x <= 0.f)) ? 1 : 0];
@@ -507,6 +508,65 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 
 			SpawnBullet(game, &WorldTransform, &dummyMc, ENEMY, game->constants.bullet_velocity, game->constants.bullet_damage_enemy);
 		}
+	}
+}
+
+void RegisterPowerup(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_PowerUp, PowerupComponent);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void ResolveCollisionPowerup(Game* game, entity_t a, entity_t b)
+{
+	PlayerComponent* a_player = Scene_Get(game->scene, a, Component_PLAYER);
+	PlayerComponent* b_player = Scene_Get(game->scene, b, Component_PLAYER);
+	HealthComponent* a_health = Scene_Get(game->scene, a, Component_HEALTH);
+	HealthComponent* b_health = Scene_Get(game->scene, b, Component_HEALTH);
+	PowerupComponent* a_powerup = Scene_Get(game->scene, a, Component_PowerUp);
+	PowerupComponent* b_powerup = Scene_Get(game->scene, b, Component_PowerUp);
+
+	if (a_powerup && b_player) 
+	{
+		switch (a_powerup->type)
+		{
+		case HEALTH:
+			b_health->health = min(b_health->max_health, b_health->health + game->constants.powerup_health);
+			break;
+		case MISSILES:
+			b_player->MissileAmmo += game->constants.powerup_missiles;
+			break;
+		case BOMBS:
+			b_player->BombAmmo += game->constants.powerup_bombs;
+			break;
+		case SCORE:
+			game->score += game->constants.powerup_score;
+			break;
+		default:
+			break;
+		}
+		Scene_DeleteEntity(game->scene, a);
+	}
+	else if (b_powerup && a_player) 
+	{
+		switch (b_powerup->type)
+		{
+		case HEALTH:
+			a_health->health = min(a_health->max_health, a_health->health + game->constants.powerup_health);
+			break;
+		case MISSILES:
+			a_player->MissileAmmo += game->constants.powerup_missiles;
+			break;
+		case BOMBS:
+			a_player->BombAmmo += game->constants.powerup_bombs;
+			break;
+		case SCORE:
+			game->score += game->constants.powerup_score;
+			break;
+		default:
+			break;
+		}
+		Scene_DeleteEntity(game->scene, b);
 	}
 }
 
@@ -737,9 +797,50 @@ void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 	}
 }
 
-void SpawnRadar(Game* game, vec2 Pos, bool flip)
+void SpawnPowerup(Game* game, mat4 transform, PowerupType type)
+{
+	entity_t powerup = Scene_CreateEntity(game->scene);
+
+	mat4* tr = Scene_AddComponent(game->scene, powerup, Component_TRANSFORM);
+	*tr = transform;
+
+	Sprite* sprite = Scene_AddComponent(game->scene, powerup, Component_SPRITE);
+	*sprite = Sprite_init();
+	sprite->size = new_vec2(1.f, 1.f);
+	switch (type)
+	{
+	case HEALTH:
+		sprite->subTex = TextureAtlas_SubTexture(&game->Textures[BONUS_TEX], new_uvec2(0, 1), new_uvec2_v(1));
+		break;
+	case MISSILES:
+		sprite->subTex = TextureAtlas_SubTexture(&game->Textures[BONUS_TEX], new_uvec2(1, 1), new_uvec2_v(1));
+		break;
+	case BOMBS:
+		sprite->subTex = TextureAtlas_SubTexture(&game->Textures[BONUS_TEX], new_uvec2(0, 0), new_uvec2_v(1));
+		break;
+	case SCORE:
+		sprite->subTex = TextureAtlas_SubTexture(&game->Textures[BONUS_TEX], new_uvec2(1, 0), new_uvec2_v(1));
+		break;
+	default:
+		break;
+	}
+	sprite->tintColor = new_vec4_v(1.f);
+
+	Colloider* coll = Scene_AddComponent(game->scene, powerup, Component_COLLOIDER);
+	coll->body = new_Rect_ps(new_vec2(-0.5f, -0.5f), new_vec2(1.f, 1.f));
+	coll->categoryBits = Layer_Enemies;
+	coll->maskBits = COLLISIONMASK_ENEMY;
+	coll->groupIndex = ENEMY;
+
+	PowerupComponent* puc = Scene_AddComponent(game->scene, powerup, Component_PowerUp);
+	puc->type = type;
+}
+
+void SpawnRadar(Game* game, vec2 Pos, bool flip, bool upgrade)
 {
 	game->EnemyCount++;
+
+	float upgradeMultiplier = upgrade ? game->constants.upgrade_health_factor : 1.f;
 
 	entity_t building = Scene_CreateEntity(game->scene);
 
@@ -750,7 +851,7 @@ void SpawnRadar(Game* game, vec2 Pos, bool flip)
 	Sprite* sprite = Scene_AddComponent(game->scene, building, Component_SPRITE);
 	*sprite = Sprite_init();
 	sprite->size = new_vec2(2.f, 1.f);
-	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 3), new_uvec2_v(1));
+	sprite->subTex = TextureAtlas_SubTexture(upgrade ? &game->Textures[UPGRADE_TEX] : &game->Textures[ENEMIES_TEX], new_uvec2(0, 3), new_uvec2_v(1));
 	sprite->tintColor = new_vec4_v(1.f);
 
 	Colloider* coll = Scene_AddComponent(game->scene, building, Component_COLLOIDER);
@@ -760,26 +861,26 @@ void SpawnRadar(Game* game, vec2 Pos, bool flip)
 	coll->groupIndex = ENEMY;
 
 	HealthComponent* health = Scene_AddComponent(game->scene, building, Component_HEALTH);
-	health->health = game->constants.structure_health;
+	health->health = game->constants.structure_health * upgradeMultiplier;
 	health->invincibility_time = 0.1f;
-	health->max_health = game->constants.structure_health;
-	health->score = game->constants.structure_score;
+	health->max_health = game->constants.structure_health * upgradeMultiplier;
+	health->score = game->constants.structure_score * upgradeMultiplier;
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
-	health->cb = NULL;
+	health->cb = game->BonusEnemyDestroyedCB;
 
 	BonusTowerAnimComponent* tower = Scene_AddComponent(game->scene, building, Component_BonusTowerAnim);
 	tower->time = MakeTimer();
 
-	//TODO spawn bonus.
-
 	EnemyTagComponent* tag = Scene_AddComponent(game->scene, building, Component_EnemyTag);
-	tag->upgraded = false; //TODO upgrade.
+	tag->upgraded = upgrade;
 }
 
-void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
+void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret, bool upgrade)
 {
 	game->EnemyCount++;
+
+	float upgradeMultiplier = upgrade ? game->constants.upgrade_health_factor : 1.f;
 
 	entity_t building = Scene_CreateEntity(game->scene);
 
@@ -791,8 +892,8 @@ void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 	*sprite = Sprite_init();
 	sprite->size = new_vec2(2.f, 1.f);
 	sprite->subTex = MissileTurret ?
-		TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 0), new_uvec2_v(1)) :
-		TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(2, 1), new_uvec2_v(1));
+		TextureAtlas_SubTexture(upgrade ? &game->Textures[UPGRADE_TEX] : &game->Textures[ENEMIES_TEX], new_uvec2(0, 0), new_uvec2_v(1)) :
+		TextureAtlas_SubTexture(upgrade ? &game->Textures[UPGRADE_TEX] : &game->Textures[ENEMIES_TEX], new_uvec2(2, 1), new_uvec2_v(1));
 	sprite->tintColor = new_vec4_v(1.f);
 
 	Colloider* coll = Scene_AddComponent(game->scene, building, Component_COLLOIDER);
@@ -802,18 +903,18 @@ void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 	coll->groupIndex = ENEMY;
 
 	HealthComponent* health = Scene_AddComponent(game->scene, building, Component_HEALTH);
-	health->health = game->constants.structure_health;
+	health->health = game->constants.structure_health * upgradeMultiplier;
 	health->invincibility_time = 0.1f;
-	health->max_health = game->constants.structure_health;
-	health->score = game->constants.structure_score;
+	health->max_health = game->constants.structure_health * upgradeMultiplier;
+	health->score = game->constants.structure_score * upgradeMultiplier;
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
-	health->cb = NULL;
+	health->cb = game->EnemyDestroyedCB;
 
 	entity_t turret = Scene_CreateEntity(game->scene);
 
 	EnemyTagComponent* tag = Scene_AddComponent(game->scene, building, Component_EnemyTag);
-	tag->upgraded = false; //TODO upgrade.
+	tag->upgraded = upgrade;
 
 	if (!MissileTurret)
 	{
@@ -838,9 +939,11 @@ void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 	}
 }
 
-void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
+void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck, bool upgrade)
 {
 	game->EnemyCount++;
+
+	float upgradeMultiplier = upgrade ? game->constants.upgrade_health_factor : 1.f;
 
 	entity_t tank = Scene_CreateEntity(game->scene);
 
@@ -861,13 +964,13 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 	coll->groupIndex = ENEMY;
 
 	HealthComponent* health = Scene_AddComponent(game->scene, tank, Component_HEALTH);
-	health->health = game->constants.vehicle_health;
+	health->health = game->constants.vehicle_health * upgradeMultiplier;
 	health->invincibility_time = 0.1f;
-	health->max_health = game->constants.vehicle_health;
-	health->score = game->constants.vehicle_score;
+	health->max_health = game->constants.vehicle_health * upgradeMultiplier;
+	health->score = game->constants.vehicle_score * upgradeMultiplier;
 	health->lastHit = MakeTimer();
 	health->lastParticle = MakeTimer();
-	health->cb = NULL;
+	health->cb = game->EnemyDestroyedCB;
 
 	MovementComponent* movement = Scene_AddComponent(game->scene, tank, Component_MOVEMENT);
 	movement->acceleration = new_vec2_v(0.f);
@@ -900,7 +1003,7 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 	}
 
 	EnemyTagComponent* tag = Scene_AddComponent(game->scene, tank, Component_EnemyTag);
-	tag->upgraded = false; //TODO upgrade.
+	tag->upgraded = upgrade;
 }
 
 void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float damage, entity_t target)
@@ -949,4 +1052,5 @@ void RegisterGameComponents(Scene_t* scene)
 	RegisterMissileLaunchers(scene);
 	RegisterBonusTower(scene);
 	RegisterTags(scene);
+	RegisterPowerup(scene);
 }

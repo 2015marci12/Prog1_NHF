@@ -144,6 +144,7 @@ double RandD_3_Range(double min, double max) { return min + (max - min) * RandD_
 
 bool RandB() { return RandF_1() > 0.5f; }
 bool RandB_Threshold(float threshold) { return RandF_1() > threshold; }
+bool RandB_Chance(float chance) { return RandF_1() < chance; }
 
 int32_t RandI32() { return Rand_int32(&global_gen); }
 int32_t RandI32_Range(int32_t min, int32_t max) { return min + (int32_t)roundf((float)(max - min) * RandF_1()); }

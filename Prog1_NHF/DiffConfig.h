@@ -51,7 +51,12 @@ typedef struct DiffConfig
 	float vehicle_score;
 	float aircraft_score;
 	float wave_scaling;
-	float balloon_chance;
+	float powerup_chance;
+
+	float powerup_score;
+	float powerup_missiles;
+	float powerup_bombs;
+	float powerup_health;
 } DiffConfig;
 
 //Load the game configuration from a file.

@@ -2,7 +2,7 @@
 
 #define STRING_CHECK_SET_VAL(ptr, idstring, val, valname) if(strcmp(idstring, #valname) == 0) ptr-> ## valname = (float)atof(val);
 
-int DiffIniHandler(const void* user, const char* section, const char* id, const char* value) 
+int DiffIniHandler(const void* user, const char* section, const char* id, const char* value)
 {
 	DiffConfig* ptr = user;
 
@@ -48,8 +48,12 @@ int DiffIniHandler(const void* user, const char* section, const char* id, const 
 	STRING_CHECK_SET_VAL(ptr, id, value, vehicle_score);
 	STRING_CHECK_SET_VAL(ptr, id, value, aircraft_score);
 	STRING_CHECK_SET_VAL(ptr, id, value, wave_scaling);
-	STRING_CHECK_SET_VAL(ptr, id, value, balloon_chance);
+	STRING_CHECK_SET_VAL(ptr, id, value, powerup_chance);
 
+	STRING_CHECK_SET_VAL(ptr, id, value, powerup_score);
+	STRING_CHECK_SET_VAL(ptr, id, value, powerup_missiles);
+	STRING_CHECK_SET_VAL(ptr, id, value, powerup_bombs);
+	STRING_CHECK_SET_VAL(ptr, id, value, powerup_health);
 	return 0;
 }
 

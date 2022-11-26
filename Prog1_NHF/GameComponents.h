@@ -112,6 +112,9 @@ typedef struct PowerupComponent
 	PowerupType type;
 } PowerupComponent;
 
+void RegisterPowerup(Scene_t* scene);
+void ResolveCollisionPowerup(Game* game, entity_t a, entity_t b);
+
 typedef struct BonusTowerAnimComponent 
 {
 	Timer_t time;
@@ -131,15 +134,16 @@ typedef struct WallTagComponent
 } WallTagComponent;
 
 void RegisterTags(Scene_t* scene);
-
 void ResolveCollisionWall(Game* game, entity_t a, entity_t b);
 
 void RegisterProjectile(Scene_t* scene);
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
 
-void SpawnRadar(Game* game, vec2 Pos, bool flip);
-void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret);
-void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck);
+void SpawnPowerup(Game* game, mat4 transform, PowerupType type);
+
+void SpawnRadar(Game* game, vec2 Pos, bool flip, bool upgrade);
+void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret, bool upgrade);
+void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck, bool upgrade);
 void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage, entity_t target);
 
 void RegisterGameComponents(Scene_t* scene);
