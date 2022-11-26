@@ -25,6 +25,7 @@ typedef enum TextureAssets
 	FONT_TEX,
 	ENEMIES_TEX,
 	HUD_TEX,
+	BONUS_TEX,
 
 	TEX_COUNT,
 } TextureAssets;
@@ -89,11 +90,20 @@ typedef struct InputState
 	int selectedWeapon;
 } InputState;
 
+typedef void(*HealthIsZeroCallback_t)(entity_t, void*);
+
 typedef struct Game 
 {
 	DiffConfig constants;
 	uint64_t score;
 	uint32_t Wave;
+	uint32_t EnemyCount;
+	bool GameOver;
+
+	HealthIsZeroCallback_t GameOverCB;
+	HealthIsZeroCallback_t EnemyDestroyedCB;
+	HealthIsZeroCallback_t BonusEnemyDestroyedCB;
+
 	Scene_t* scene;
 	SDL_Window* window;
 
@@ -113,7 +123,7 @@ void RenderGame(Game* game, Renderer2D* renderer);
 
 bool GameResizeEvent(SDL_Event* e, void* userData);
 bool GameOnCollision(SDL_Event* e, void* userData);
-void GameOnMouseRelease(SDL_Event* e, void* userData);
+bool GameOnMouseRelease(SDL_Event* e, void* userData);
 
 void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* input);
 void GameUpdateCamera(Game* game, InputState* input);

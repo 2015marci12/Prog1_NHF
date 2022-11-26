@@ -28,6 +28,7 @@ int DiffIniHandler(const void* user, const char* section, const char* id, const 
 
 	STRING_CHECK_SET_VAL(ptr, id, value, arena_width);
 	STRING_CHECK_SET_VAL(ptr, id, value, arena_height);
+	STRING_CHECK_SET_VAL(ptr, id, value, wall_damage);
 
 	STRING_CHECK_SET_VAL(ptr, id, value, missile_damage);
 	STRING_CHECK_SET_VAL(ptr, id, value, missile_velocity);

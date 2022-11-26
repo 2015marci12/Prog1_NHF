@@ -30,6 +30,7 @@ typedef struct DiffConfig
 
 	float arena_width;
 	float arena_height;
+	float wall_damage;
 
 	float missile_damage;
 	float missile_velocity;

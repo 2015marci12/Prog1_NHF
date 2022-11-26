@@ -20,7 +20,7 @@ void MovePlanes(Game* game, float dt)
 		Transform_Decompose_2D(*transform, &Pos, &Dir, &rot);
 		vec2 velocitynormal = vec2_Normalize(mc->velocity);
 		float vel = vec2_Len(mc->velocity);
-;
+		;
 		float velAngle = vec2_Angle(velocitynormal);
 
 		//Angle differernce.
@@ -137,6 +137,31 @@ void SpawnBomb(Game* game, mat4* transform, MovementComponent* mc)
 	bProj->type = BOMB;
 }
 
+entity_t GetBestMissileTarget(Game* game, vec2 Pos, vec2 Dir)
+{
+	entity_t best = -1;
+	float score = 1000000000.f;
+
+	for (View_t v = View_Create(game->scene, 2, Component_TRANSFORM, Component_EnemyTag);
+		!View_End(&v); View_Next(&v))
+	{
+		mat4* e_tr = View_GetComponent(&v, 0);
+		vec2 EnemyPos;
+		Transform_Decompose_2D(*e_tr, &EnemyPos, NULL, NULL);
+
+		vec2 Diff = vec2_Sub(EnemyPos, Pos);
+		float e_score = (1.f - vec2_Dot(vec2_Normalize(Diff), Dir)) * vec2_Len(Diff);
+
+		if (e_score < score)
+		{
+			best = View_GetCurrent(&v);
+			score = e_score;
+		}
+	}
+
+	return best;
+}
+
 void UpdatePlayer(Game* game, InputState* input, float dt)
 {
 	View_t view = View_Create(game->scene, 5, Component_TRANSFORM, Component_PLAYER, Component_MOVEMENT, Component_SPRITE, Component_PLANE);
@@ -169,7 +194,7 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 	//scale thrust.
 	float thrust = game->constants.thrust_idle;
 	thrust *= input->Thrust;
-	if (input->booster)
+	if (input->booster && pc->fuel > 0.f)
 	{
 		thrust = game->constants.thrust_booster;
 
@@ -201,10 +226,18 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 			pc->boosterParticleTimer = MakeTimer();
 			Particles_Emit(game->Particles[PARTICLE_BOOSTER], p);
 		}
+
+		//Fuel consumption.
+		pc->fuel -= game->constants.booster_fuelconsumption * dt;
 	}
 	else
 	{
 		sprite->overlays[0] = SubTexture_empty();
+	}
+	//recharge fuel when the booster is not in use.
+	if (pc->fuel < pc->max_fuel && !input->booster)
+	{
+		pc->fuel = min(pc->max_fuel, pc->fuel + game->constants.booster_recharge_rate * dt);
 	}
 	pm->thrust = thrust;
 
@@ -226,7 +259,18 @@ void UpdatePlayer(Game* game, InputState* input, float dt)
 				SpawnBullet(game, transform, mc, FRIENDLY, game->constants.bullet_velocity, game->constants.bullet_damage);
 			}
 			break;
-		case 1: break;
+		case 1:
+			//Anim
+			sprite->overlays[1] = TextureAtlas_SubTexture(&game->Textures[PLAYER_TEX], new_uvec2(1, 2), new_uvec2(1, 1));
+			if (GetElapsedSeconds(pc->shootingTimer) > game->constants.cannon_shooting_time && pc->releasedAfterFiring && pc->MissileAmmo)
+			{
+				pc->shootingTimer = MakeTimer();
+				entity_t target = GetBestMissileTarget(game, new_vec2_v3(Pos), trueLookVec);
+				SpawnMissile(game, new_vec2_v3(Pos), trueLookVec, FRIENDLY, game->constants.missile_damage, target);
+				pc->releasedAfterFiring = false; //Wait for trigger release before releasing another missile.
+				pc->MissileAmmo--;
+			}
+			break;
 		case 2:
 			//Anim
 			sprite->overlays[1] = TextureAtlas_SubTexture(&game->Textures[PLAYER_TEX], new_uvec2(1, 2), new_uvec2(1, 1));
@@ -266,7 +310,7 @@ void UpdateHealth(Game* game, float dt)
 			mat4* transform = Scene_Get(game->scene, View_GetCurrent(&v), Component_TRANSFORM);
 			if (transform)
 			{
-				//Death animation. 
+				//Death animation.
 				//TODO maybe change to something with a bit more OOMPH. Also sound effect.
 				vec2 Pos = new_vec2_v4(mat4x4_Mul_v(*transform, new_vec4(0.f, 0.f, 0.f, 1.f)));
 
@@ -466,6 +510,56 @@ void UpdateGunTurretAIs(Game* game, float dt, entity_t player)
 	}
 }
 
+void RegisterBonusTower(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_BonusTowerAnim, BonusTowerAnimComponent);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateBonusTowers(Game* game)
+{
+	for (View_t v = View_Create(game->scene, 2, Component_SPRITE, Component_BonusTowerAnim);
+		!View_End(&v); View_Next(&v))
+	{
+		Sprite* Sprite = View_GetComponent(&v, 0);
+		BonusTowerAnimComponent* Tower = View_GetComponent(&v, 1);
+
+		//Animation. If time permitted, I would create a generalized animation component for this, but alas...
+		Sprite->subTex = Animation_GetAt(&game->Animations[RADAR_ANIM], GetElapsedSeconds(Tower->time), NULL);
+	}
+}
+
+void RegisterTags(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_EnemyTag, EnemyTagComponent);
+	Scene_AddComponentType(scene, cinf);
+	ComponentInfo_t cinf2 = COMPONENT_DEF(Component_WallTag, WallTagComponent);
+	Scene_AddComponentType(scene, cinf2);
+}
+
+void ResolveCollisionWall(Game* game, entity_t a, entity_t b)
+{
+	WallTagComponent* a_tag = Scene_Get(game->scene, a, Component_WallTag);
+	WallTagComponent* b_tag = Scene_Get(game->scene, b, Component_WallTag);
+	PlayerComponent* a_pc = Scene_Get(game->scene, a, Component_PLAYER);
+	PlayerComponent* b_pc = Scene_Get(game->scene, b, Component_PLAYER);
+	HealthComponent* a_health = Scene_Get(game->scene, a, Component_HEALTH);
+	HealthComponent* b_health = Scene_Get(game->scene, b, Component_HEALTH);
+	MovementComponent* a_movement = Scene_Get(game->scene, a, Component_MOVEMENT);
+	MovementComponent* b_movement = Scene_Get(game->scene, b, Component_MOVEMENT);
+
+	if (a_pc && b_tag) 
+	{
+		a_health->health -= game->constants.wall_damage * vec2_Len(a_movement->velocity);
+		a_health->lastHit = MakeTimer();
+	}
+	else if (b_pc && a_tag)
+	{
+		b_health->health -= game->constants.wall_damage * vec2_Len(b_movement->velocity);
+		b_health->lastHit = MakeTimer();
+	}
+}
+
 void RegisterProjectile(Scene_t* scene)
 {
 	ComponentInfo_t cinf = COMPONENT_DEF(Component_PROJECTILE, ProjectileComponent);
@@ -507,6 +601,13 @@ void UpdateMissiles(Game* game, float dt)
 			Particles_Emit(game->Particles[HEAVY_SMOKE_PARTICLES], p);
 
 			Missile->particleTimer = MakeTimer();
+		}
+
+		if (!Scene_EntityValid(game->scene, Missile->target))
+		{
+			//Fly straight if no target is present or target is destroyed.
+			View_Next(&v);
+			continue;
 		}
 
 		mat4 target_Transform = CalcWorldTransform(game->scene, Missile->target);
@@ -636,8 +737,50 @@ void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b)
 	}
 }
 
+void SpawnRadar(Game* game, vec2 Pos, bool flip)
+{
+	game->EnemyCount++;
+
+	entity_t building = Scene_CreateEntity(game->scene);
+
+	mat4* transform = Scene_AddComponent(game->scene, building, Component_TRANSFORM);
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3_v2(Pos, 0.f));
+	if (flip) *transform = mat4_Rotate(*transform, PI, new_vec3(0.f, 0.f, 1.f));
+
+	Sprite* sprite = Scene_AddComponent(game->scene, building, Component_SPRITE);
+	*sprite = Sprite_init();
+	sprite->size = new_vec2(2.f, 1.f);
+	sprite->subTex = TextureAtlas_SubTexture(&game->Textures[ENEMIES_TEX], new_uvec2(0, 3), new_uvec2_v(1));
+	sprite->tintColor = new_vec4_v(1.f);
+
+	Colloider* coll = Scene_AddComponent(game->scene, building, Component_COLLOIDER);
+	coll->body = new_Rect_ps(new_vec2(-0.5f, -0.5f), new_vec2(1.f, 1.f));
+	coll->categoryBits = Layer_Enemies;
+	coll->maskBits = COLLISIONMASK_ENEMY;
+	coll->groupIndex = ENEMY;
+
+	HealthComponent* health = Scene_AddComponent(game->scene, building, Component_HEALTH);
+	health->health = game->constants.structure_health;
+	health->invincibility_time = 0.1f;
+	health->max_health = game->constants.structure_health;
+	health->score = game->constants.structure_score;
+	health->lastHit = MakeTimer();
+	health->lastParticle = MakeTimer();
+	health->cb = NULL;
+
+	BonusTowerAnimComponent* tower = Scene_AddComponent(game->scene, building, Component_BonusTowerAnim);
+	tower->time = MakeTimer();
+
+	//TODO spawn bonus.
+
+	EnemyTagComponent* tag = Scene_AddComponent(game->scene, building, Component_EnemyTag);
+	tag->upgraded = false; //TODO upgrade.
+}
+
 void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 {
+	game->EnemyCount++;
+
 	entity_t building = Scene_CreateEntity(game->scene);
 
 	mat4* transform = Scene_AddComponent(game->scene, building, Component_TRANSFORM);
@@ -669,7 +812,10 @@ void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 
 	entity_t turret = Scene_CreateEntity(game->scene);
 
-	if (!MissileTurret) 
+	EnemyTagComponent* tag = Scene_AddComponent(game->scene, building, Component_EnemyTag);
+	tag->upgraded = false; //TODO upgrade.
+
+	if (!MissileTurret)
 	{
 		//Add a gun turret if this is not a missile launcher.
 		AddChild(game->scene, building, turret);
@@ -685,7 +831,7 @@ void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 		GunTurretAI* AI = Scene_AddComponent(game->scene, turret, Component_GunTurretAI);
 		AI->reloadTimer = MakeTimer();
 	}
-	else 
+	else
 	{
 		MissileLauncherAI* missilelauncher = Scene_AddComponent(game->scene, building, Component_MissileLauncer);
 		missilelauncher->realoadTimer = MakeTimer();
@@ -694,6 +840,8 @@ void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret)
 
 void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 {
+	game->EnemyCount++;
+
 	entity_t tank = Scene_CreateEntity(game->scene);
 
 	mat4* transform = Scene_AddComponent(game->scene, tank, Component_TRANSFORM);
@@ -750,6 +898,9 @@ void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck)
 		MissileLauncherAI* launcher = Scene_AddComponent(game->scene, tank, Component_MissileLauncer);
 		launcher->realoadTimer = MakeTimer();
 	}
+
+	EnemyTagComponent* tag = Scene_AddComponent(game->scene, tank, Component_EnemyTag);
+	tag->upgraded = false; //TODO upgrade.
 }
 
 void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float damage, entity_t target)
@@ -769,7 +920,7 @@ void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float dama
 	Colloider* coll = Scene_AddComponent(game->scene, missile, Component_COLLOIDER);
 	coll->body = new_Rect_ps(new_vec2(-0.25f, -0.125f), new_vec2(0.5f, 0.25f));
 	coll->categoryBits = Layer_Missiles;
-	coll->maskBits = COLLISIONMASK_ENEMY;
+	coll->maskBits = COLLISIONMASK_MISSILE;
 	coll->groupIndex = alligiance;
 
 	MovementComponent* movement = Scene_AddComponent(game->scene, missile, Component_MOVEMENT);
@@ -796,4 +947,6 @@ void RegisterGameComponents(Scene_t* scene)
 	RegisterTankAIs(scene);
 	RegisterMissiles(scene);
 	RegisterMissileLaunchers(scene);
+	RegisterBonusTower(scene);
+	RegisterTags(scene);
 }

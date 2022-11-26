@@ -137,6 +137,9 @@
     <ClInclude Include="BitmapFont.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MainMenuScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Config.ini">
@@ -166,7 +169,7 @@
     <None Include="Resources\LightSmokeAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="RadarAnim.ini">
+    <None Include="Resources\RadarAnim.ini">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

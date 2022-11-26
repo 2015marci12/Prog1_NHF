@@ -54,6 +54,7 @@
     <ClInclude Include="Input.h" />
     <ClInclude Include="LinearAllocator.h" />
     <ClInclude Include="Log.h" />
+    <ClInclude Include="MainMenuScene.h" />
     <ClInclude Include="Mathcell.h" />
     <ClInclude Include="mIni.h" />
     <ClInclude Include="ParticleSystem.h" />
@@ -64,7 +65,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Config.ini" />
-    <None Include="RadarAnim.ini" />
     <None Include="Resources\BoosterAnim.ini" />
     <None Include="Resources\CannonAnim.ini" />
     <None Include="Resources\ExplosionAnim.ini" />
@@ -73,6 +73,7 @@
     <None Include="Resources\LightSmokeAnim.ini" />
     <None Include="Resources\MissileAnim.ini" />
     <None Include="Resources\HeavySmokeAnim.ini" />
+    <None Include="Resources\RadarAnim.ini" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

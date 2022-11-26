@@ -30,6 +30,10 @@ enum ComponentTypes
 	Component_PlaneAI,
 	Component_MissileGuidance,
 	Component_MissileLauncer,
+	Component_BonusTowerAnim,
+
+	Component_EnemyTag,
+	Component_WallTag,
 };
 
 /*

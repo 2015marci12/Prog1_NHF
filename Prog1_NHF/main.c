@@ -6,12 +6,16 @@
 #include "Renderer2D.h"
 
 #include "GameScene.h"
+#include "MainMenuScene.h"
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
 SDL_Window* window;
 Game game;
+MainMenu menu;
+uint64_t latestScore;
+uint32_t latestWave;
 
 //Handle window events.
 bool OnWindowEvent(SDL_Event* e, void* userData)
@@ -33,6 +37,127 @@ bool OnWindowEvent(SDL_Event* e, void* userData)
 	}
 
 	return false;
+}
+
+typedef enum CurrentScene 
+{
+	SCENE_NONE = 0,
+	SCENE_GAME,
+	SCENE_MAINMENU,
+	SCENE_SETTINGS,
+	SCENE_CREDITS,
+	SCENE_SCORESUBMIT,
+} CurrentScene;
+CurrentScene currentScene = SCENE_NONE;
+CurrentScene nextScene = SCENE_NONE;
+
+void SwitchScenes(CurrentScene newScene) 
+{
+	//Destroy Previous.
+	switch (currentScene)
+	{
+	case SCENE_GAME:
+		CleanupGame(&game);
+		break;
+	case SCENE_MAINMENU:
+		break;
+	case SCENE_SETTINGS:
+		break;
+	case SCENE_CREDITS:
+		break;
+	case SCENE_SCORESUBMIT:
+		break;
+	default:
+		break;
+	}
+
+	//Init Next.
+	currentScene = newScene;
+	switch (currentScene)
+	{
+	case SCENE_GAME:
+		InitGame(&game, window);
+		break;
+	case SCENE_MAINMENU:
+		break;
+	case SCENE_SETTINGS:
+		break;
+	case SCENE_CREDITS:
+		break;
+	case SCENE_SCORESUBMIT:
+		break;
+	default:
+		break;
+	}
+}
+
+void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer) 
+{
+	EventDispatcher_t ev;
+
+	//Events.
+	while (GetEvent(&ev))
+	{
+		//Dispatch events.
+		DispatchEvent(&ev, SDL_WINDOWEVENT, OnWindowEvent, NULL);
+
+		//Dispatch scene specific events.
+		switch (currentScene)
+		{
+		case SCENE_GAME:
+			DispatchGameEvents(&game, &ev);
+			break;
+		case SCENE_MAINMENU:
+			break;
+		case SCENE_SETTINGS:
+			break;
+		case SCENE_CREDITS:
+			break;
+		case SCENE_SCORESUBMIT:
+			break;
+		default:
+			break;
+		}
+
+		*exit |= !ev.handled && ev.e.type == SDL_QUIT; //Exit once there is an unhandled QUIT event.
+	}
+	ResetUserEventMemory(); //Reset user event allocator.
+
+	//Timing.
+	float timediff = GetElapsedSeconds(*timer);
+	*timer = MakeTimer();
+
+	//Update and render the scene.
+	switch (currentScene)
+	{
+	case SCENE_GAME:
+		UpdateGame(&game, timediff);
+		RenderGame(&game, renderer);
+
+		//Switch scenes.
+		if (game.GameOver)
+		{
+			//Save score for the submitting frame.
+			latestScore = game.score;
+			latestWave = game.Wave;
+			nextScene = SCENE_SCORESUBMIT;
+		}
+		break;
+	case SCENE_MAINMENU:
+		break;
+	case SCENE_SETTINGS:
+		break;
+	case SCENE_CREDITS:
+		break;
+	case SCENE_SCORESUBMIT:
+		break;
+	default:
+		break;
+	}
+	
+	SDL_GL_SwapWindow(window);
+
+	SDL_PumpEvents();
 }
 
 int main(int argc, char* argv[])
@@ -78,8 +203,9 @@ int main(int argc, char* argv[])
 	GLEnableDebugOutput();
 
 	//Load game scene.
-	InitGame(&game, window);
+	SwitchScenes(SCENE_GAME);
 
+	//Init renderer.
 	Renderer2D renderer;
 	Renderer2D_Init(&renderer);
 
@@ -89,34 +215,16 @@ int main(int argc, char* argv[])
 
 	Timer_t timer = MakeTimer();
 
-	EventDispatcher_t ev;
 	bool exit = false;
 	while (!exit)
 	{
-		//Events.
-		while (GetEvent(&ev))
-		{
-			//Dispatch events.
-			DispatchEvent(&ev, SDL_WINDOWEVENT, OnWindowEvent, NULL);
-			DispatchGameEvents(&game, &ev);
+		Frame(&exit, &timer, &renderer);
+		if (nextScene != SCENE_NONE) SwitchScenes(nextScene);
+		nextScene = SCENE_NONE;
+	}	
 
-			exit |= !ev.handled && ev.e.type == SDL_QUIT; //Exit once there is an unhandled QUIT event.
-		}
-		ResetUserEventMemory(); //Reset user event allocator.
-
-		//Timing.
-		float timediff = GetElapsedSeconds(timer);
-		timer = MakeTimer();
-
-		UpdateGame(&game, timediff);
-		RenderGame(&game, &renderer);
-
-		SDL_GL_SwapWindow(window);
-
-		SDL_PumpEvents();
-	}
-
-	CleanupGame(&game);
+	//Free the current scene's resources.
+	SwitchScenes(SCENE_NONE);
 
 	Renderer2D_Destroy(&renderer);
 	SDL_GL_DeleteContext(glcontext);

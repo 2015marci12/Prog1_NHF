@@ -30,8 +30,6 @@ void RegisterPlayer(Scene_t* scene);
 void UpdatePlayer(Game* game, InputState* input, float dt);
 
 
-typedef void(*HealthIsZeroCallback_t)(entity_t, Game*);
-
 typedef struct HealthComponent
 {
 	float health;
@@ -112,13 +110,34 @@ typedef enum PowerupType
 typedef struct PowerupComponent 
 {
 	PowerupType type;
-	vec2 SpawnPos;
-	Timer_t timer;
 } PowerupComponent;
+
+typedef struct BonusTowerAnimComponent 
+{
+	Timer_t time;
+} BonusTowerAnimComponent;
+
+void RegisterBonusTower(Scene_t* scene);
+void UpdateBonusTowers(Game* game);
+
+typedef struct EnemyTagComponent 
+{
+	bool upgraded;
+} EnemyTagComponent;
+
+typedef struct WallTagComponent 
+{
+	char dummy;
+} WallTagComponent;
+
+void RegisterTags(Scene_t* scene);
+
+void ResolveCollisionWall(Game* game, entity_t a, entity_t b);
 
 void RegisterProjectile(Scene_t* scene);
 void ResolveCollisionProjectiles(Game* game, entity_t a, entity_t b);
 
+void SpawnRadar(Game* game, vec2 Pos, bool flip);
 void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret);
 void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck);
 void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage, entity_t target);

@@ -61,6 +61,7 @@ void SetupWalls(Game* game)
 	mat4* transform = Scene_AddComponent(game->scene, floor, Component_TRANSFORM);
 	Colloider* colloider = Scene_AddComponent(game->scene, floor, Component_COLLOIDER);
 	PhysicsComponent* physics = Scene_AddComponent(game->scene, floor, Component_PHYSICS);
+	WallTagComponent* wallTag = Scene_AddComponent(game->scene, floor, Component_WallTag);
 
 	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, -game->constants.arena_height / 2 - scale, 0.f));
 
@@ -78,6 +79,7 @@ void SetupWalls(Game* game)
 	transform = Scene_AddComponent(game->scene, ceiling, Component_TRANSFORM);
 	colloider = Scene_AddComponent(game->scene, ceiling, Component_COLLOIDER);
 	physics = Scene_AddComponent(game->scene, ceiling, Component_PHYSICS);
+	wallTag = Scene_AddComponent(game->scene, ceiling, Component_WallTag);
 
 	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(0.f, game->constants.arena_height / 2 + scale * 1.f, 0.f));
 
@@ -95,6 +97,7 @@ void SetupWalls(Game* game)
 	transform = Scene_AddComponent(game->scene, leftwall, Component_TRANSFORM);
 	colloider = Scene_AddComponent(game->scene, leftwall, Component_COLLOIDER);
 	physics = Scene_AddComponent(game->scene, leftwall, Component_PHYSICS);
+	wallTag = Scene_AddComponent(game->scene, leftwall, Component_WallTag);
 
 	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(-game->constants.arena_width / 2, 0.f, 0.f));
 
@@ -112,6 +115,7 @@ void SetupWalls(Game* game)
 	transform = Scene_AddComponent(game->scene, rightwall, Component_TRANSFORM);
 	colloider = Scene_AddComponent(game->scene, rightwall, Component_COLLOIDER);
 	physics = Scene_AddComponent(game->scene, rightwall, Component_PHYSICS);
+	wallTag = Scene_AddComponent(game->scene, rightwall, Component_WallTag);
 
 	*transform = mat4_Translate(mat4x4_Identity(), new_vec3(game->constants.arena_width / 2, 0.f, 0.f));
 
@@ -147,6 +151,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		game->Textures[BG1_TEX] = TextureAtlas_create(LoadTex2D("Resources\\BG.png"), new_uvec2(550, 367));
 		game->Textures[ENEMIES_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Enemies.png"), new_uvec2(32, 16));
 		game->Textures[HUD_TEX] = TextureAtlas_create(LoadTex2D("Resources\\HudIcons.png"), new_uvec2(32, 32));
+		game->Textures[BONUS_TEX] = TextureAtlas_create(LoadTex2D("Resources\\Bonuses.png"), new_uvec2(32, 32));
 
 		//Load font.
 		game->font = LoadBitmapFont("Resources\\@Malgun Gothic.bff", true);
@@ -223,6 +228,8 @@ Game* InitGame(Game* game, SDL_Window* window)
 		pc->selected_weapon = 0;
 		pc->BombAmmo = 10;
 		pc->MissileAmmo = 5;
+		pc->max_fuel = game->constants.booster_fuel;
+		pc->fuel = game->constants.booster_fuel;
 
 		pcoll->body = new_Rect(-0.5f, -0.2f, 1.f, 0.4f);
 		pcoll->categoryBits = Layer_Player;
@@ -264,6 +271,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		SpawnTank(game, new_vec2(1.f, -game->constants.arena_height * 0.5f + 0.5f), false, true);
 		SpawnTurret(game, new_vec2(-10.f, -game->constants.arena_height * 0.5f + 0.5f), false, false);
 		SpawnTurret(game, new_vec2(5.f, game->constants.arena_height * 0.5f - 0.5f), true, true);
+		SpawnRadar(game, new_vec2(-5.f, game->constants.arena_height * 0.5f - 0.5f), true);
 	}
 	return game;
 }
@@ -312,6 +320,7 @@ void UpdateGame(Game* game, float dt)
 		UpdateMissileLaunchers(game, dt);
 		UpdateMissiles(game, dt);
 		UpdateLifetimes(game->scene);
+		UpdateBonusTowers(game);
 		GameUpdateCamera(game, &inputstate);
 		UpdatePlayer(game, &inputstate, dt);
 		FireCollisionEvents(game->scene);
@@ -397,11 +406,12 @@ bool GameOnCollision(SDL_Event* e, void* userData)
 
 	//Game logic.
 	ResolveCollisionProjectiles(game, ev->a, ev->b);
+	ResolveCollisionWall(game, ev->a, ev->b);
 
 	return false;
 }
 
-void GameOnMouseRelease(SDL_Event* e, void* userData)
+bool GameOnMouseRelease(SDL_Event* e, void* userData)
 {
 	//Translate pointers.
 	SDL_MouseButtonEvent* ev = e;
@@ -411,9 +421,12 @@ void GameOnMouseRelease(SDL_Event* e, void* userData)
 	{
 		//Set release trigger for the player.
 		View_t Player = View_Create(game->scene, 1, Component_PLAYER);
+		if (View_End(&Player)) return false;
 		PlayerComponent* pc = View_GetComponent(&Player, 0);
 		pc->releasedAfterFiring = true;
 	}
+
+	return false;
 }
 
 void GameUpdateCamera(Game* game, InputState* input)
@@ -460,11 +473,33 @@ void GameRenderBackground(Game* game, Renderer2D* renderer)
 		TextureAtlas_SubTexture(&game->Textures[BG1_TEX], new_uvec2(0, 0), new_uvec2(1, 1)));
 }
 
+void GetEnemyDirections(Game* game, vec2 PlayerPos, bool* left, bool* right) 
+{
+	if (!left || !right) return;
+	for (View_t v = View_Create(game->scene, 2, Component_TRANSFORM, Component_EnemyTag);
+		!View_End(&v); View_Next(&v)) 
+	{
+		mat4* transform = View_GetComponent(&v, 0);
+		vec2 EnemyPos;
+		Transform_Decompose_2D(*transform, &EnemyPos, NULL, NULL);
+
+		*left |= EnemyPos.x < PlayerPos.x;
+		*right |= EnemyPos.x > PlayerPos.x;
+		
+		if (*left && *right) return;
+	}
+}
+
 void GameRenderGui(Game* game, Renderer2D* renderer)
 {
-	View_t Player = View_Create(game->scene, 2, Component_PLAYER, Component_HEALTH);
+	View_t Player = View_Create(game->scene, 3, Component_PLAYER, Component_HEALTH, Component_TRANSFORM);
+	if (View_End(&Player)) return; //Game over, no player found.
+
 	PlayerComponent* pc = View_GetComponent(&Player, 0);
 	HealthComponent* health = View_GetComponent(&Player, 1);
+	mat4* transform = View_GetComponent(&Player, 2);
+	vec2 PlayerPos;
+	Transform_Decompose_2D(*transform, &PlayerPos, NULL, NULL);
 
 	int w, h;
 	SDL_GetWindowSize(game->window, &w, &h);
@@ -511,6 +546,24 @@ void GameRenderGui(Game* game, Renderer2D* renderer)
 	snprintf(buff, 256, "Wave: %u", game->Wave);
 	x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
 	Renderer2D_DrawText(renderer, new_vec3(x, margin + 50, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
+
+	//Enemy counter.
+	snprintf(buff, 256, "Enemies: %u", game->EnemyCount);
+	x = (float)w - Renderer2D_CalcTextSize(renderer, game->font, fontSize, new_vec4_v(1.f), buff).x - margin;
+	Renderer2D_DrawText(renderer, new_vec3(x, margin + 100, 0.f), game->font, fontSize, new_vec4_v(1.f), buff, true);
+
+	//Enemy direction indicators.
+	bool left = false, right = false;
+	GetEnemyDirections(game, PlayerPos, &left, &right);
+
+	x = w - margin - 200;
+	if (left) 
+		Renderer2D_DrawFilledRect_t(renderer, new_Rect(x, margin + 150, 100, 100), 0.f, new_vec4_v(1.f),
+			TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(1, 3), new_uvec2(1, 1)));
+	x += 100;
+	if (right) 
+		Renderer2D_DrawFilledRect_t(renderer, new_Rect(x, margin + 150, 100, 100), 0.f, new_vec4_v(1.f),
+			TextureAtlas_SubTexture(&game->Textures[HUD_TEX], new_uvec2(0, 3), new_uvec2(1, 1)));
 
 	//Weapon selection.
 	
