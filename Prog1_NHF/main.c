@@ -15,15 +15,19 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
-SDL_Window* window;
-Game game;
-MainMenu menu;
-LeaderBoard leaderboard;
-ScoreSubmissionScene scoresubmit;
-SettingsScene settings;
-CreditsScene credits;
-uint64_t latestScore;
-uint32_t latestWave;
+typedef struct ProgramData 
+{
+	SDL_Window* window;
+	Game game;
+	MainMenu menu;
+	LeaderBoard leaderboard;
+	ScoreSubmissionScene scoresubmit;
+	SettingsScene settings;
+	CreditsScene credits;
+	uint64_t latestScore;
+	uint32_t latestWave;
+} ProgramData;
+
 
 //Handle window events.
 bool OnWindowEvent(SDL_Event* e, void* userData)
@@ -60,28 +64,28 @@ typedef enum CurrentScene
 CurrentScene currentScene = SCENE_NONE;
 CurrentScene nextScene = SCENE_NONE;
 
-void SwitchScenes(CurrentScene newScene) 
+void SwitchScenes(ProgramData* data, CurrentScene newScene)
 {
 	//Destroy Previous.
 	switch (currentScene)
 	{
 	case SCENE_GAME:
-		CleanupGame(&game);
+		CleanupGame(&data->game);
 		break;
 	case SCENE_MAINMENU:
-		CleanupMenu(&menu);
+		CleanupMenu(&data->menu);
 		break;
 	case SCENE_LEADERBOARD:
-		CleanupLeaderBoard(&leaderboard);
+		CleanupLeaderBoard(&data->leaderboard);
 		break;
 	case SCENE_SETTINGS:
-		CleanupSettings(&settings);
+		CleanupSettings(&data->settings);
 		break;
 	case SCENE_CREDITS:
-		CleanupCredits(&credits);
+		CleanupCredits(&data->credits);
 		break;
 	case SCENE_SCORESUBMIT:
-		CleanupScoreSubmission(&scoresubmit);
+		CleanupScoreSubmission(&data->scoresubmit);
 		break;
 	default:
 		break;
@@ -92,29 +96,29 @@ void SwitchScenes(CurrentScene newScene)
 	switch (currentScene)
 	{
 	case SCENE_GAME:
-		InitGame(&game, window);
+		InitGame(&data->game, data->window);
 		break;
 	case SCENE_MAINMENU:
-		InitMenu(&menu, window);
+		InitMenu(&data->menu, data->window);
 		break;
 	case SCENE_LEADERBOARD:
-		InitLeaderBoard(&leaderboard, window);
+		InitLeaderBoard(&data->leaderboard, data->window);
 		break;
 	case SCENE_SETTINGS:
-		InitSettings(&settings, window);
+		InitSettings(&data->settings, data->window);
 		break;
 	case SCENE_CREDITS:
-		InitCredits(&credits, window);
+		InitCredits(&data->credits, data->window);
 		break;
 	case SCENE_SCORESUBMIT:
-		InitScoreSubmission(&scoresubmit, latestScore, latestWave, window);
+		InitScoreSubmission(&data->scoresubmit, data->latestScore, data->latestWave, data->window);
 		break;
 	default:
 		break;
 	}
 }
 
-void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer) 
+void Frame(ProgramData* data, bool* exit, Timer_t* timer, Renderer2D* renderer) 
 {
 	EventDispatcher_t ev;
 
@@ -128,22 +132,22 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 		switch (currentScene)
 		{
 		case SCENE_GAME:
-			DispatchGameEvents(&game, &ev);
+			DispatchGameEvents(&data->game, &ev);
 			break;
 		case SCENE_MAINMENU:
-			MenuDispatchEvents(&ev, &menu);
+			MenuDispatchEvents(&ev, &data->menu);
 			break;
 		case SCENE_LEADERBOARD:
-			DispatchLeaderBoardEvents(&ev, &leaderboard);
+			DispatchLeaderBoardEvents(&ev, &data->leaderboard);
 			break;
 		case SCENE_SETTINGS:
-			DispatchSettingsEvents(&ev, &settings);
+			DispatchSettingsEvents(&ev, &data->settings);
 			break;
 		case SCENE_CREDITS:
-			DispatchCreditsEvents(&ev, &credits);
+			DispatchCreditsEvents(&ev, &data->credits);
 			break;
 		case SCENE_SCORESUBMIT:
-			DispatchEventsScoreSubmission(&ev, &scoresubmit);
+			DispatchEventsScoreSubmission(&ev, &data->scoresubmit);
 			break;
 		default:
 			break;
@@ -161,24 +165,24 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 	switch (currentScene)
 	{
 	case SCENE_GAME:
-		UpdateGame(&game, timediff);
-		RenderGame(&game, renderer);
+		UpdateGame(&data->game, timediff);
+		RenderGame(&data->game, renderer);
 
 		//Switch scenes.
-		if (game.GameOver)
+		if (data->game.GameOver)
 		{
 			//Save score for the submitting frame.
-			latestScore = game.score;
-			latestWave = game.Wave;
+			data->latestScore = data->game.score;
+			data->latestWave = data->game.Wave;
 			nextScene = SCENE_SCORESUBMIT;
 		}
 		break;
 	case SCENE_MAINMENU:
-		RenderMenu(&menu, renderer);
+		RenderMenu(&data->menu, renderer);
 
-		if (menu.clicked) 
+		if (data->menu.clicked)
 		{
-			switch (menu.selected)
+			switch (data->menu.selected)
 			{
 			case STARTGAME:
 				nextScene = SCENE_GAME;
@@ -201,27 +205,27 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 		}
 		break;
 	case SCENE_LEADERBOARD:
-		RenderLeaderBoard(&leaderboard, renderer);
+		RenderLeaderBoard(&data->leaderboard, renderer);
 
-		if (leaderboard.GoBack) nextScene = SCENE_MAINMENU;
+		if (data->leaderboard.GoBack) nextScene = SCENE_MAINMENU;
 
 		break;
 	case SCENE_SETTINGS:
-		RenderSettings(&settings, renderer);
+		RenderSettings(&data->settings, renderer);
 
-		if(settings.GoBack) nextScene = SCENE_MAINMENU;
+		if(data->settings.GoBack) nextScene = SCENE_MAINMENU;
 		break;
 	case SCENE_CREDITS:
-		RenderCredits(&credits, renderer);
+		RenderCredits(&data->credits, renderer);
 
-		if (credits.GoBack) nextScene = SCENE_MAINMENU;
+		if (data->credits.GoBack) nextScene = SCENE_MAINMENU;
 		break;
 	case SCENE_SCORESUBMIT:
-		RenderScoreSubmission(&scoresubmit, renderer);
+		RenderScoreSubmission(&data->scoresubmit, renderer);
 
-		if (scoresubmit.next) 
+		if (data->scoresubmit.next)
 		{
-			SaveScoreToLeaderBoard(scoresubmit.score);
+			SaveScoreToLeaderBoard(data->scoresubmit.score);
 			nextScene = SCENE_MAINMENU;
 		}
 		break;
@@ -229,7 +233,7 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 		break;
 	}
 	
-	SDL_GL_SwapWindow(window);
+	SDL_GL_SwapWindow(data->window);
 
 	SDL_PumpEvents();
 }
@@ -238,6 +242,8 @@ int main(int argc, char* argv[])
 {
 	//Init RNG.
 	Rand_Init();
+
+	ProgramData data;
 
 	/* SDL inicializálása és ablak megnyitása */
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
@@ -251,13 +257,13 @@ int main(int argc, char* argv[])
 	GlobalSettings* s = GetGlobalSettings();
 	uvec2 Size = GetResolutionVariation(s->ResolutionVariation);
 
-	window = SDL_CreateWindow("SDL peldaprogram",
+	data.window = SDL_CreateWindow("SDL peldaprogram",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		Size.x, Size.y,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | 
 		((s->FullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
 
-	if (window == NULL)
+	if (data.window == NULL)
 	{
 		SDL_Log("Nem hozhato letre az ablak: %s", SDL_GetError());
 		exit(1);
@@ -272,7 +278,7 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
 	//Init gl
-	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+	SDL_GLContext glcontext = SDL_GL_CreateContext(data.window);
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) exit(-1);
 
 	// Use v-sync
@@ -281,14 +287,14 @@ int main(int argc, char* argv[])
 	GLEnableDebugOutput();
 
 	//Load game scene.
-	SwitchScenes(SCENE_MAINMENU);
+	SwitchScenes(&data, SCENE_MAINMENU);
 
 	//Init renderer.
 	Renderer2D renderer;
 	Renderer2D_Init(&renderer);
 
 	int w, h;
-	SDL_GetWindowSize(window, &w, &h);
+	SDL_GetWindowSize(data.window, &w, &h);
 	glViewport(0, 0, w, h);
 
 	Timer_t timer = MakeTimer();
@@ -296,13 +302,13 @@ int main(int argc, char* argv[])
 	bool exit = false;
 	while (!exit)
 	{
-		Frame(&exit, &timer, &renderer);
-		if (nextScene != SCENE_NONE) SwitchScenes(nextScene);
+		Frame(&data, &exit, &timer, &renderer);
+		if (nextScene != SCENE_NONE) SwitchScenes(&data, nextScene);
 		nextScene = SCENE_NONE;
 	}	
 
 	//Free the current scene's resources.
-	SwitchScenes(SCENE_NONE);
+	SwitchScenes(&data, SCENE_NONE);
 
 	Renderer2D_Destroy(&renderer);
 	SDL_GL_DeleteContext(glcontext);

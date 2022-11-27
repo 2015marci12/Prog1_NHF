@@ -8,6 +8,7 @@
 #endif
 
 #define SDL_MAIN_HANDLED
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdlib.h>
 
