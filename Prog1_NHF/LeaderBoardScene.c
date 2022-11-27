@@ -1,8 +1,8 @@
 #include "LeaderBoardScene.h"
 
-bool compareScores(void* a, void* b) 
+int compareScores(void* a, void* b) 
 {
-	return ((Score*)a)->Score < ((Score*)b)->Score;
+	return (int64_t)((Score*)b)->Score - (int64_t)((Score*)a)->Score;
 }
 
 void LoadScores(LeaderBoard* l) 
@@ -18,7 +18,7 @@ void LoadScores(LeaderBoard* l)
 	{
 		if (l->scoreCount >= l->scoreCapacity) 
 		{
-			size_t newCap = max(64, l->scoreCapacity * 2);
+			size_t newCap = max(64, l->scoreCount * 2);
 			l->scores = realloc(l->scores, newCap * sizeof(Score));
 			l->scoreCapacity = newCap;
 		}
