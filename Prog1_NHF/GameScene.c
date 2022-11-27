@@ -140,7 +140,7 @@ Game* InitGame(Game* game, SDL_Window* window)
 		RegisterStandardComponents(game->scene);
 		RegisterGameComponents(game->scene);
 
-		LoadConfig(&game->constants, "Config.ini");
+		LoadConfig(&game->constants, "Resources\\Config.ini");
 		game->window = window;
 
 		game->EnemyDestroyedCB = EnemyDestroyedCallBack;

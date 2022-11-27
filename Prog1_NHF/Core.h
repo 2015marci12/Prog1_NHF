@@ -5,6 +5,8 @@
 //memory debugging.
 #ifdef _DEBUG
 #	include "debugmalloc.h"
+#else
+#define NO_LOG
 #endif
 
 #define SDL_MAIN_HANDLED
