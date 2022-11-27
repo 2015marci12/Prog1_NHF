@@ -324,6 +324,7 @@ void UpdateGame(Game* game, float dt)
 		UpdateMissileLaunchers(game, dt);
 		UpdateMissiles(game, dt);
 		UpdateLifetimes(game->scene);
+		UpdateFighters(game, dt);
 		UpdateBonusTowers(game);
 		GameUpdateCamera(game, &inputstate);
 		UpdatePlayer(game, &inputstate, dt);
@@ -646,7 +647,7 @@ void SpawnNextWave(Game* game)
 
 	for (int i = 0; i < enemy_count; i++)
 	{
-		int type = RandUI32_Range(0, 2);
+		int type = RandUI32_Range(0, 3);
 		bool Upgrade = RandB_Chance(0.2f);
 		bool OtherType = RandB_Chance(0.5f);
 		float X_Pos = RandF_1_Range(-game->constants.arena_width / 2, game->constants.arena_width / 2);
@@ -662,7 +663,10 @@ void SpawnNextWave(Game* game)
 			break;
 		case 2:
 			SpawnTank(game, new_vec2(X_Pos, Y_Pos), TopOrBottom, OtherType, Upgrade);
-			//TODO Fighter enemies.
+			break;
+		case 3:
+			SpawnFighter(game, new_vec2(X_Pos, 0.f), Upgrade);
+			break;
 		default:
 			break;
 		}

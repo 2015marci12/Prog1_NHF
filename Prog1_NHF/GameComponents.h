@@ -98,6 +98,9 @@ typedef struct FighterAI
 	int burstCounter;
 } FighterAI;
 
+void RegisterFighterAI(Scene_t* scene);
+void UpdateFighters(Game* game, float dt);
+
 typedef enum PowerupType 
 {
 	HEALTH,
@@ -145,5 +148,6 @@ void SpawnRadar(Game* game, vec2 Pos, bool flip, bool upgrade);
 void SpawnTurret(Game* game, vec2 Pos, bool flip, bool MissileTurret, bool upgrade);
 void SpawnTank(Game* game, vec2 Pos, bool flip, bool MissileTruck, bool upgrade);
 void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alliegence, float damage, entity_t target);
+void SpawnFighter(Game* game, vec2 Pos, bool Upgrade);
 
 void RegisterGameComponents(Scene_t* scene);

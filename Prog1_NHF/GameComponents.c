@@ -732,6 +732,91 @@ void UpdateMissileLaunchers(Game* game, float dt)
 	}
 }
 
+void RegisterFighterAI(Scene_t* scene)
+{
+	ComponentInfo_t cinf = COMPONENT_DEF(Component_FighterAI, FighterAI);
+	Scene_AddComponentType(scene, cinf);
+}
+
+void UpdateFighters(Game* game, float dt)
+{
+	View_t PlayerView = View_Create(game->scene, 1, Component_PLAYER);
+	entity_t player = View_GetCurrent(&PlayerView);
+
+	mat4 PlayerTransform = *(mat4*)Scene_Get(game->scene, player, Component_TRANSFORM);
+
+	vec2 PlayerPos = new_vec2_v4(mat4x4_Mul_v(PlayerTransform, new_vec4(0.f, 0.f, 0.f, 1.f)));
+
+	for (View_t v = View_Create(game->scene, 5, Component_TRANSFORM, Component_SPRITE, Component_MOVEMENT, Component_FighterAI, Component_EnemyTag);
+		!View_End(&v); View_Next(&v)) 
+	{
+		mat4* Transform = View_GetComponent(&v, 0);
+		Sprite* Sprite = View_GetComponent(&v, 1);
+		MovementComponent* Movement = View_GetComponent(&v, 2);
+		FighterAI* AI = View_GetComponent(&v, 3);
+		EnemyTagComponent* Tag = View_GetComponent(&v, 4);
+
+		vec2 Pos, Dir;
+		float rot;
+		Transform_Decompose_2D(*Transform, &Pos, &Dir, &rot);
+
+		vec2 TowardsPlayer = vec2_Sub(PlayerPos, Pos);
+
+		float dist = vec2_Len(TowardsPlayer);
+
+		//Cruise towards player and try to maintain altitude at the middle.
+		if (dist > 10.f) 
+		{
+			vec2 Dir;
+			Dir.x = TowardsPlayer.x / fabsf(TowardsPlayer.x);
+			Dir.y = -Pos.y / game->constants.arena_height;
+
+			Dir = vec2_Normalize(Dir);
+
+			Movement->velocity = vec2_Mul_s(Dir, 3.f);
+			*Transform = mat4_Rotate(mat4_Translate(mat4x4_Identity(), new_vec3_v2(Pos, 0.f)), vec2_Angle(Dir), new_vec3(0.f, 0.f, 1.f));
+
+			Sprite->subTex = TextureAtlas_SubTexture(&game->Textures[Tag->upgraded ? UPGRADE_TEX : ENEMIES_TEX],
+				new_uvec2(1, 5), new_uvec2(1, 1));
+			if (Dir.x < 0.f) Sprite->subTex = SubTexture_Flip(Sprite->subTex, false, true);
+
+			//Launch missiles when close enough.
+			if (dist < 20.f && GetElapsedSeconds(AI->reloadTimer) > game->constants.missile_reload_enemy) 
+			{
+				AI->reloadTimer = MakeTimer();
+				SpawnMissile(game, Pos, Dir, ENEMY, game->constants.missile_damage_enemy, player);
+			}
+		}
+		//Switch to guns and fly towards player (fast) when really close. 
+		//Imitates missiles in that it takes time to turn.
+		else 
+		{
+			//Rotate towards target (rate limited)
+			float ToTargetRot = clamp(
+				-PI * dt,
+				PI * dt,
+				Angle_Diff(vec2_Angle(TowardsPlayer), rot)
+			);
+			*Transform = mat4_Rotate(*Transform, ToTargetRot, new_vec3(0.f, 0.f, 1.f));
+			Transform_Decompose_2D(*Transform, &Pos, &Dir, &rot);
+			Movement->velocity = vec2_Mul_s(Dir, 6.f);
+
+			Sprite->subTex = TextureAtlas_SubTexture(&game->Textures[Tag->upgraded ? UPGRADE_TEX : ENEMIES_TEX],
+				new_uvec2(2, 5), new_uvec2(1, 1));
+			if (Movement->velocity.x < 0.f) Sprite->subTex = SubTexture_Flip(Sprite->subTex, false, true);
+
+			//Fire bullets in bursts of 10, then wait 1 second.
+			if (GetElapsedSeconds(AI->reloadTimer) > (AI->burstCounter > 10 ? 1.f : game->constants.cannon_shooting_time))
+			{
+				AI->reloadTimer = MakeTimer();
+				if (AI->burstCounter > 10) AI->burstCounter = 0;
+				AI->burstCounter++;
+				SpawnBullet(game, Transform, Movement, ENEMY, game->constants.bullet_velocity, game->constants.bullet_damage_enemy);
+			}
+		}
+	}
+}
+
 void ProjectileHit(HealthComponent* health, ProjectileComponent* proj)
 {
 	if (GetElapsedSeconds(health->lastHit) > health->invincibility_time)
@@ -1036,6 +1121,51 @@ void SpawnMissile(Game* game, vec2 Pos, vec2 Dir, int32_t alligiance, float dama
 	seeker->particleTimer = MakeTimer();
 }
 
+void SpawnFighter(Game* game, vec2 Pos, bool Upgrade)
+{
+	game->EnemyCount++;
+
+	float upgradeMultiplier = Upgrade ? game->constants.upgrade_health_factor : 1.f;
+
+	entity_t fighter = Scene_CreateEntity(game->scene);
+
+	mat4* transform = Scene_AddComponent(game->scene, fighter, Component_TRANSFORM);
+	*transform = mat4_Translate(mat4x4_Identity(), new_vec3_v2(Pos, 0.f));
+
+	Sprite* sprite = Scene_AddComponent(game->scene, fighter, Component_SPRITE);
+	*sprite = Sprite_init();
+	sprite->size = new_vec2(2.f, 1.f);
+	sprite->subTex = SubTexture_empty(); //Texture set by the AI:
+	sprite->tintColor = new_vec4_v(1.f);
+
+	Colloider* coll = Scene_AddComponent(game->scene, fighter, Component_COLLOIDER);
+	coll->body = new_Rect_ps(new_vec2(-1.f, -0.5f), new_vec2(2.f, 1.f));
+	coll->categoryBits = Layer_Enemies;
+	coll->maskBits = COLLISIONMASK_ENEMY;
+	coll->groupIndex = ENEMY;
+
+	HealthComponent* health = Scene_AddComponent(game->scene, fighter, Component_HEALTH);
+	health->health = game->constants.aircraft_health * upgradeMultiplier;
+	health->invincibility_time = 0.1f;
+	health->max_health = game->constants.aircraft_health * upgradeMultiplier;
+	health->score = (uint64_t)(game->constants.aircraft_score * upgradeMultiplier);
+	health->lastHit = MakeTimer();
+	health->lastParticle = MakeTimer();
+	health->cb = game->EnemyDestroyedCB;
+
+	MovementComponent* movement = Scene_AddComponent(game->scene, fighter, Component_MOVEMENT);
+	movement->acceleration = new_vec2_v(0.f);
+	movement->velocity = new_vec2_v(0.f);
+
+	FighterAI* AI = Scene_AddComponent(game->scene, fighter, Component_FighterAI);
+	AI->burstCounter = 0;
+	AI->reloadTimer = MakeTimer();
+
+	EnemyTagComponent* tag = Scene_AddComponent(game->scene, fighter, Component_EnemyTag);
+	tag->upgraded = Upgrade;
+
+}
+
 void RegisterGameComponents(Scene_t* scene)
 {
 	RegisterPlane(scene);
@@ -1049,4 +1179,5 @@ void RegisterGameComponents(Scene_t* scene)
 	RegisterBonusTower(scene);
 	RegisterTags(scene);
 	RegisterPowerup(scene);
+	RegisterFighterAI(scene);
 }

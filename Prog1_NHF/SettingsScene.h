@@ -1,7 +1,6 @@
 #pragma once
 
 //TODO using SDL_Mixer
-//TODO planes and plane AI
 //TODO credits
 
 #include "Core.h"

@@ -48,6 +48,7 @@
     <ClInclude Include="Components.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Core.h" />
+    <ClInclude Include="CreditsScene.h" />
     <ClInclude Include="debugmalloc.h" />
     <ClInclude Include="DiffConfig.h" />
     <ClInclude Include="ECS.h" />
