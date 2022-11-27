@@ -39,6 +39,7 @@
     <ClCompile Include="Random.c" />
     <ClCompile Include="Renderer2D.c" />
     <ClCompile Include="ScoreSubmissionScene.c" />
+    <ClCompile Include="SettingsScene.c" />
     <ClCompile Include="Timer.c" />
   </ItemGroup>
   <ItemGroup>
@@ -66,6 +67,7 @@
     <ClInclude Include="Random.h" />
     <ClInclude Include="Renderer2D.h" />
     <ClInclude Include="ScoreSubmissionScene.h" />
+    <ClInclude Include="SettingsScene.h" />
     <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>

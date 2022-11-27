@@ -78,6 +78,9 @@
     <ClCompile Include="ScoreSubmissionScene.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SettingsScene.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -153,6 +156,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ScoreSubmissionScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SettingsScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
