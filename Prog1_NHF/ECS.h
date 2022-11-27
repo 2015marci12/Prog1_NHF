@@ -158,23 +158,36 @@ typedef struct Scene_t
 
 	TreeNode_t* storageTree;
 } Scene_t;
-
+//Initialize a scene.
 Scene_t* Scene_Init(Scene_t* ptr);
+//Release the resources held by a scene.
 void Scene_Destroy(Scene_t* ptr);
+//Allocate a scene on the heap.
 Scene_t* Scene_New();
+//Free a scene allocated on the heap.
 void Scene_Delete(Scene_t* ptr);
 
+//Get a component storage registered to the scene.
 ComponentStorage_t* Scene_GetStorage(Scene_t* ptr, componentid_t cid);
+//Add a new component storage to the scene.
 ComponentStorage_t* Scene_AddComponentType(Scene_t* ptr, ComponentInfo_t comp);
 
+//Create a new entity.
 entity_t Scene_CreateEntity(Scene_t* ptr);
+//Check if the entity is valid in the current scene.
 bool Scene_EntityValid(Scene_t* ptr, entity_t entity);
+//Destroy an entity.
 void Scene_DeleteEntity(Scene_t* ptr, entity_t entity);
 
+//Check if an entity has the given component type.
 bool Scene_Has(Scene_t* ptr, entity_t entity, componentid_t cid);
+//Get a component from an entity. Returns NULL if the entity does not have that component.
 void* Scene_Get(Scene_t* ptr, entity_t entity, componentid_t cid);
+//Get a component from an entity, or insert a default component if the entity has no components of the given type.
 void* Scene_Get_Or_Emplace(Scene_t* ptr, entity_t entity, componentid_t cid, void* defaultData);
+//Add a component to the given entity.
 void* Scene_AddComponent(Scene_t* ptr, entity_t entity, componentid_t cid);
+//Remove a component from the given entity.
 void Scene_RemoveComponent(Scene_t* ptr, entity_t entity, componentid_t cid);
 
 /*
@@ -193,13 +206,21 @@ typedef struct View_t
 	size_t currentIndex;
 	entity_t currentEntity;
 } View_t;
-
+//Create a view with an arbitrary number of component storages.
 View_t View_Create(Scene_t* scene, size_t numComponents, ...);
+//Utility function that checks if the current entity fulfills the view's criteria.
 bool View_HasAll(View_t* ptr);
+//Used to check if the view has more entities in a for loop.
 bool View_End(View_t* ptr);
+//Iteration.
 void View_Next(View_t* ptr);
+//Resets the view to its starting state.
 void View_Reset(View_t* ptr);
+//Get the current entity index in the smallest component set.
 size_t View_GetCurrentIndex(View_t* ptr);
+//Get a component from the storages in the view.
 void* View_GetComponent(View_t* ptr, uint32_t CompIndex);
+//Get the current entity.
 entity_t View_GetCurrent(View_t* ptr);
+//Destroy the current entity and jump to the next.
 void View_DestroyCurrent_FindNext(View_t* ptr);

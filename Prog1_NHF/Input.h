@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 
+//A structure that saves the state of input devices in a given moment.
 typedef struct InputSnapshot_t 
 {
 	uint8_t* keyboardstate;
@@ -16,12 +17,17 @@ typedef struct InputSnapshot_t
 	int mouseX, mouseY;
 } InputSnapshot_t;
 
+//A utility function that creates an input snapshot.
 InputSnapshot_t GetInput();
 
+//Check if a key is pressed.
 bool IsKeyPressed(const InputSnapshot_t* state, uint32_t sdlk);
+//Check if a mouse button is pressed.
 bool IsMouseButtonPressed(const InputSnapshot_t* state, uint32_t button);
+//Get the position of the mouse.
 ivec2 GetMousePos(const InputSnapshot_t* state);
 
+//The event handler function signature.
 typedef bool(*EventFun_t)(SDL_Event*, void*);
 
 typedef struct EventDispatcher_t

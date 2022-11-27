@@ -59,5 +59,5 @@ typedef struct DiffConfig
 	float powerup_health;
 } DiffConfig;
 
-//Load the game configuration from a file.
+//Load the game configuration from an INI file on disk.
 bool LoadConfig(DiffConfig* config, const char* filepath);

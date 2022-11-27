@@ -14,6 +14,7 @@
 
 #include <SDL2/SDL.h>
 
+//An enumeration of all texture assets.
 typedef enum TextureAssets
 {
 	PLAYER_TEX,
@@ -31,6 +32,7 @@ typedef enum TextureAssets
 	TEX_COUNT,
 } TextureAssets;
 
+//An enumeration of all animation assets.
 typedef enum AnimationAssets 
 {
 	BOOSTER_ANIM,
@@ -46,6 +48,7 @@ typedef enum AnimationAssets
 	ANIM_COUNT,
 } AnimationAssets;
 
+//An enumeration of all particle systems.
 typedef enum ParticleSystems
 {
 	PARTICLE_EXPLOSION,
@@ -69,6 +72,7 @@ typedef enum CollisionLayers
 	Layer_EVERYTHING = 0xFFFFFFFFFFFFFFFFull,
 } CollisionLayer;
 
+//Teams.
 typedef enum AlliegenceGroup
 {
 	NEUTRAL = 0,
@@ -76,12 +80,14 @@ typedef enum AlliegenceGroup
 	ENEMY = -2,
 } AlliegenceGroup;
 
+//Collision masks.
 #define COLLISIONMASK_WALL Layer_EVERYTHING
 #define COLLISIONMASK_PLAYER (Layer_Walls | Layer_Bullets| Layer_Enemies | Layer_Missiles)
 #define COLLISIONMASK_ENEMY (Layer_Walls | Layer_Bullets | Layer_Player | Layer_Missiles)
 #define COLLISIONMASK_MISSILE (Layer_Walls | Layer_Player | Layer_Enemies | Layer_Bullets)
 #define COLLISIONMASK_BULLET (Layer_Walls | Layer_Player | Layer_Enemies | Layer_Missiles)
 
+//The parsed input data.
 typedef struct InputState
 {
 	vec2 LookDir;
@@ -92,8 +98,10 @@ typedef struct InputState
 	int selectedWeapon;
 } InputState;
 
+//A callback for the health component.
 typedef void(*HealthIsZeroCallback_t)(entity_t, void*);
 
+//The main game scene.
 typedef struct Game 
 {
 	DiffConfig constants;
@@ -116,25 +124,41 @@ typedef struct Game
 	ParticleSystem* Particles[PARTICLESYS_COUNT];
 } Game;
 
+//Initialize the game.
 Game* InitGame(Game* game, SDL_Window* window);
+//Release the resources owned by the game.
 void CleanupGame(Game* game);
 
+//Dispatch all events concerning the game.
 void DispatchGameEvents(Game* game, EventDispatcher_t* dispatcher);
+//Update the game world.
 void UpdateGame(Game* game, float dt);
+//Render the game to the screen.
 void RenderGame(Game* game, Renderer2D* renderer);
 
+//React to window resizes.
 bool GameResizeEvent(SDL_Event* e, void* userData);
+//React to collisions.
 bool GameOnCollision(SDL_Event* e, void* userData);
+//React to mouse button releases.
 bool GameOnMouseRelease(SDL_Event* e, void* userData);
 
+//Parse the current input.
 void GameParseInput(SDL_Window* win, InputSnapshot_t* snapshot, InputState* input);
+//Update the camera position.
 void GameUpdateCamera(Game* game, InputState* input);
 
+//Render the parallax background.
 void GameRenderBackground(Game* game, Renderer2D* renderer);
+//Render the HUD.
 void GameRenderGui(Game* game, Renderer2D* renderer);
 
+//The callback that fires when the player dies.
 void GameOverCallBack(entity_t player, void* game);
+//The callback that fires when a normal enemy dies.
 void EnemyDestroyedCallBack(entity_t enemy, void* game);
+//The callback that fires when an enemy that might spawn a bonus dies.
 void BonusEnemyDestroyedCallBack(entity_t enemy, void* game);
 
+//Spawn the next wave of enemies.
 void SpawnNextWave(Game* game);

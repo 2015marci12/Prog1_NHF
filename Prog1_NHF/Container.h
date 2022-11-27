@@ -23,8 +23,11 @@ typedef struct TreeNode_t
 	void* data;
 } TreeNode_t;
 
+//Create a new node for a binary tree.
 TreeNode_t* Tree_NewNode(Tree_key_t key, void* data);
+//Get the height of a binary tree.
 int Tree_GetHeight(TreeNode_t* node);
+//Get the balance of a tree node.
 int Tree_BalanceDiff(TreeNode_t* node);
 
 /*
@@ -85,6 +88,7 @@ void Tree_ResetPool();
 * A test to check wether the cached heights remain valid after some operations, as they should.
 * Used to unit test the tree logic.
 */
+#ifdef _DEBUG
 static bool Tree_TestCheckCachedHeights(TreeNode_t* root, int* height) 
 {
 	if (!root) 
@@ -100,3 +104,4 @@ static bool Tree_TestCheckCachedHeights(TreeNode_t* root, int* height)
 	*height = max(left, right) + 1;
 	return ret && (*height == root->height);
 }
+#endif

@@ -6,11 +6,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+//A node in the pool allocator's freelist.
 typedef struct FreeListNode_t 
 {
 	struct FreeListNode_t* next;
 } FreeListNode_t;
 
+//A block of memory owned by the pool allocator. part of a linked list.
 typedef struct PoolBlock_t 
 {
 	size_t size;
@@ -18,6 +20,7 @@ typedef struct PoolBlock_t
 	char data[];
 } PoolBlock_t;
 
+//A cascading pool allocator.
 typedef struct PoolAllocator_t 
 {
 	size_t elem_size;
