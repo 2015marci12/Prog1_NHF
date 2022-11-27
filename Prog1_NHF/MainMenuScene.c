@@ -120,7 +120,7 @@ void RenderMenu(MainMenu* menu, Renderer2D* renderer)
 	Renderer2D_DrawFilledRect_t(renderer, new_Rect(0, h, w, -h), 2.f, new_vec4_v(1.f),
 		TextureAtlas_SubTexture(&menu->BG, new_uvec2(0, 0), new_uvec2(1, 1)));
 
-	//TODO title screen I have the time.
+	//TODO title screen if I have the time.
 
 	snprintf(buff, 256, "New Game");
 	vec2 size = Renderer2D_CalcTextSize(renderer, menu->font, fontSize, buff);

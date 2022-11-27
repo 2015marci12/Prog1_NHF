@@ -19,6 +19,7 @@ Game game;
 MainMenu menu;
 LeaderBoard leaderboard;
 ScoreSubmissionScene scoresubmit;
+SettingsScene settings;
 uint64_t latestScore;
 uint32_t latestWave;
 
@@ -72,6 +73,7 @@ void SwitchScenes(CurrentScene newScene)
 		CleanupLeaderBoard(&leaderboard);
 		break;
 	case SCENE_SETTINGS:
+		CleanupSettings(&settings);
 		break;
 	case SCENE_CREDITS:
 		break;
@@ -96,6 +98,7 @@ void SwitchScenes(CurrentScene newScene)
 		InitLeaderBoard(&leaderboard, window);
 		break;
 	case SCENE_SETTINGS:
+		InitSettings(&settings, window);
 		break;
 	case SCENE_CREDITS:
 		break;
@@ -130,6 +133,7 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 			DispatchLeaderBoardEvents(&ev, &leaderboard);
 			break;
 		case SCENE_SETTINGS:
+			DispatchSettingsEvents(&ev, &settings);
 			break;
 		case SCENE_CREDITS:
 			break;
@@ -198,6 +202,9 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 
 		break;
 	case SCENE_SETTINGS:
+		RenderSettings(&settings, renderer);
+
+		if(settings.GoBack) nextScene = SCENE_MAINMENU;
 		break;
 	case SCENE_CREDITS:
 		break;
@@ -233,14 +240,14 @@ int main(int argc, char* argv[])
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
-	GlobalSettings* settings = GetGlobalSettings();
-	uvec2 Size = GetResolutionVariation(settings->ResolutionVariation);
+	GlobalSettings* s = GetGlobalSettings();
+	uvec2 Size = GetResolutionVariation(s->ResolutionVariation);
 
 	window = SDL_CreateWindow("SDL peldaprogram",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		Size.x, Size.y,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | 
-		((settings->FullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
+		((s->FullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
 
 	if (window == NULL)
 	{

@@ -12,6 +12,8 @@
 #include "Input.h"
 #include "Timer.h"
 
+#include "LeaderBoardScene.h"
+
 #include <SDL2/SDL.h>
 #include <time.h>
 
@@ -31,7 +33,34 @@ void SaveGlobalSettings();
 uvec2 GetResolutionVariation(uint32_t variation);
 uint32_t GetResolutionVariationCount();
 
+typedef enum CurrentSettings 
+{
+	VOLUME_MASTER,
+	VOLUME_MUSIC,
+	VOLUME_EFFECTS,
+	RESETLEADERBOARD,
+	FULLSCREEN,
+	RESOLUTION,
+	SETTINGS_MAX,
+} CurrentSettings;
+
 typedef struct SettingsScene 
 {
-	char dummy;
+	CurrentSettings selected;
+	bool GoBack;
+
+	SDL_Window* window;
+	BitmapFont* font;
+	TextureAtlas BG;
+	TextureAtlas HUD;
 } SettingsScene;
+
+SettingsScene* InitSettings(SettingsScene* s, SDL_Window* window);
+void CleanupSettings(SettingsScene* s);
+
+bool SettingsKeyDown(SDL_Event* e, void* data);
+bool SettingsMouseDown(SDL_Event* e, void* data);
+
+void DispatchSettingsEvents(EventDispatcher_t* ev, SettingsScene* s);
+
+void RenderSettings(SettingsScene* s, Renderer2D* renderer);

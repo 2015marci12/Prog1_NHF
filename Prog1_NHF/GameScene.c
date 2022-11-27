@@ -359,7 +359,10 @@ void RenderGame(Game* game, Renderer2D* renderer)
 		Particles_Draw(game->Particles[i], renderer);
 	}
 
+	//Debug colloiders.
+#ifdef _DEBUG
 	DebugDrawColloiders(game->scene, renderer);
+#endif // _DEBUG
 
 	Renderer2D_EndScene(renderer);
 
