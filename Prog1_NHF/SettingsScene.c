@@ -254,7 +254,7 @@ void RenderSettings(SettingsScene* s, Renderer2D* renderer)
 	const float margin2 = 50.f;
 	const float fontSize = 50.f;
 
-	Renderer2D_DrawFilledRect_t(renderer, new_Rect(0, h, w, -h), 2.f, new_vec4_v(1.f),
+	Renderer2D_DrawFilledRect_t(renderer, new_Rect(0, h, w, -h), 2.f, new_vec4_v(0.5f),
 		TextureAtlas_SubTexture(&s->BG, new_uvec2(0, 0), new_uvec2(1, 1)));
 
 	//Back button.

@@ -11,4 +11,22 @@
 #include <SDL2/SDL.h>
 #include <time.h>
 
-//TODO
+typedef struct CreditsScene 
+{
+	bool GoBack;
+
+	SDL_Window* window;
+	BitmapFont* font;
+	TextureAtlas BG;
+	TextureAtlas HUD;
+} CreditsScene;
+
+CreditsScene* InitCredits(CreditsScene* c, SDL_Window* window);
+void CleanupCredits(CreditsScene* c);
+
+bool CreditsMouseDown(SDL_Event* e, void* data);
+bool CreditsKeyDown(SDL_Event* e, void* data);
+
+void DispatchCreditsEvents(EventDispatcher_t* ev, CreditsScene* c);
+
+void RenderCredits(CreditsScene* c, Renderer2D* renderer);

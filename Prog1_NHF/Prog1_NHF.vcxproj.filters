@@ -81,6 +81,9 @@
     <ClCompile Include="SettingsScene.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CreditsScene.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">

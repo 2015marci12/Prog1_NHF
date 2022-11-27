@@ -10,6 +10,7 @@
 #include "MainMenuScene.h"
 #include "LeaderBoardScene.h"
 #include "ScoreSubmissionScene.h"
+#include "CreditsScene.h"
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
@@ -20,6 +21,7 @@ MainMenu menu;
 LeaderBoard leaderboard;
 ScoreSubmissionScene scoresubmit;
 SettingsScene settings;
+CreditsScene credits;
 uint64_t latestScore;
 uint32_t latestWave;
 
@@ -76,6 +78,7 @@ void SwitchScenes(CurrentScene newScene)
 		CleanupSettings(&settings);
 		break;
 	case SCENE_CREDITS:
+		CleanupCredits(&credits);
 		break;
 	case SCENE_SCORESUBMIT:
 		CleanupScoreSubmission(&scoresubmit);
@@ -101,6 +104,7 @@ void SwitchScenes(CurrentScene newScene)
 		InitSettings(&settings, window);
 		break;
 	case SCENE_CREDITS:
+		InitCredits(&credits, window);
 		break;
 	case SCENE_SCORESUBMIT:
 		InitScoreSubmission(&scoresubmit, latestScore, latestWave, window);
@@ -136,6 +140,7 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 			DispatchSettingsEvents(&ev, &settings);
 			break;
 		case SCENE_CREDITS:
+			DispatchCreditsEvents(&ev, &credits);
 			break;
 		case SCENE_SCORESUBMIT:
 			DispatchEventsScoreSubmission(&ev, &scoresubmit);
@@ -207,6 +212,9 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 		if(settings.GoBack) nextScene = SCENE_MAINMENU;
 		break;
 	case SCENE_CREDITS:
+		RenderCredits(&credits, renderer);
+
+		if (credits.GoBack) nextScene = SCENE_MAINMENU;
 		break;
 	case SCENE_SCORESUBMIT:
 		RenderScoreSubmission(&scoresubmit, renderer);
