@@ -130,7 +130,7 @@ void SpawnBomb(Game* game, mat4* transform, MovementComponent* mc)
 	bColl->groupIndex = FRIENDLY;
 
 	ProjectileComponent* bProj = Scene_AddComponent(game->scene, bomb, Component_PROJECTILE);
-	bProj->damage = game->constants.bullet_damage; //TODO
+	bProj->damage = game->constants.missile_damage;
 	bProj->type = BOMB;
 }
 
@@ -333,7 +333,6 @@ void UpdateHealth(Game* game, float dt)
 				float rot = RandF_1_Range(0.f, 2.f * PI);
 				float v = RandF_1();
 				vec2 velrand = vec2_Rot(new_vec2(0.f, 0.5f), rot);
-				rot *= PI * 2.f;
 				Particle p = MakeParticle_s(Pos, rot, new_vec4_v(1.f), new_vec2_v(5.f), 1.f);
 				p.Velocity = vec2_Add(new_vec2(0.f, 2.f), velrand);
 				p.EndSize = new_vec2_v(1.f);

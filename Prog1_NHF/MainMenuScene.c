@@ -56,8 +56,6 @@ bool MenuMouseDown(SDL_Event* e, const void* data)
 	w = aspect * 1080.f;
 	h = 1080.f;
 
-	mat4 view = mat4_Ortho(0, aspect * 1080.f, 0, 1080.f, 30, -30);
-
 	vec2 MousePos = new_vec2(ev->x, ev->y);
 	MousePos.x *= scale;
 	MousePos.y *= scale;
@@ -122,7 +120,7 @@ void RenderMenu(MainMenu* menu, Renderer2D* renderer)
 	Renderer2D_DrawFilledRect_t(renderer, new_Rect(0, h, w, -h), 2.f, new_vec4_v(1.f),
 		TextureAtlas_SubTexture(&menu->BG, new_uvec2(0, 0), new_uvec2(1, 1)));
 
-	//TODO title screem of O have the time.
+	//TODO title screen I have the time.
 
 	snprintf(buff, 256, "New Game");
 	vec2 size = Renderer2D_CalcTextSize(renderer, menu->font, fontSize, buff);

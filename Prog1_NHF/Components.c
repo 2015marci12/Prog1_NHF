@@ -223,8 +223,6 @@ void FireCollisionEvents(Scene_t* scene)
 {
 	//check everything against everything. Not too efficient but this is the simplest solution.
 	//Should be enough for a simple game.
-	//TODO: switch to spatial partitioning once performance becomes a problem.
-	//TODO: custom event queue if the 65536 max events in the SDL queue becomes the limiting factor somehow.
 	for (View_t outter = View_Create(scene, 2, Component_TRANSFORM, Component_COLLOIDER);
 		!View_End(&outter); View_Next(&outter))
 	{

@@ -5,6 +5,7 @@
 #include "ECS.h"
 #include "Renderer2D.h"
 
+#include "SettingsScene.h"
 #include "GameScene.h"
 #include "MainMenuScene.h"
 #include "LeaderBoardScene.h"
@@ -92,7 +93,7 @@ void SwitchScenes(CurrentScene newScene)
 		InitMenu(&menu, window);
 		break;
 	case SCENE_LEADERBOARD:
-		InitLeaderBoard(&leaderboard);
+		InitLeaderBoard(&leaderboard, window);
 		break;
 	case SCENE_SETTINGS:
 		break;
@@ -126,6 +127,7 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 			MenuDispatchEvents(&ev, &menu);
 			break;
 		case SCENE_LEADERBOARD:
+			DispatchLeaderBoardEvents(&ev, &leaderboard);
 			break;
 		case SCENE_SETTINGS:
 			break;
@@ -190,6 +192,10 @@ void Frame(bool* exit, Timer_t* timer, Renderer2D* renderer)
 		}
 		break;
 	case SCENE_LEADERBOARD:
+		RenderLeaderBoard(&leaderboard, renderer);
+
+		if (leaderboard.GoBack) nextScene = SCENE_MAINMENU;
+
 		break;
 	case SCENE_SETTINGS:
 		break;
@@ -227,10 +233,14 @@ int main(int argc, char* argv[])
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
+	GlobalSettings* settings = GetGlobalSettings();
+	uvec2 Size = GetResolutionVariation(settings->ResolutionVariation);
+
 	window = SDL_CreateWindow("SDL peldaprogram",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		660, 480,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE );
+		Size.x, Size.y,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | 
+		((settings->FullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
 
 	if (window == NULL)
 	{

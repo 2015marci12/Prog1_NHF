@@ -313,7 +313,7 @@ void UpdateGame(Game* game, float dt)
 	GameParseInput(game->window, &snapshot, &inputstate);
 
 	//Update.
-	View_t v = View_Create(game->scene, 1, Component_PLAYER);//TODO game over
+	View_t v = View_Create(game->scene, 1, Component_PLAYER);
 	if (!View_End(&v))
 	{
 		UpdateTankAIs(game, dt, View_GetCurrent(&v));

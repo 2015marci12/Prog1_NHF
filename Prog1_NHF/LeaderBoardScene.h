@@ -29,12 +29,21 @@ typedef struct LeaderBoard
 	SDL_Window* window;
 	BitmapFont* font;
 	TextureAtlas BG;
+	TextureAtlas HUD;
 
 	bool GoBack;
 } LeaderBoard;
 
-LeaderBoard* InitLeaderBoard(LeaderBoard* l);
+LeaderBoard* InitLeaderBoard(LeaderBoard* l, SDL_Window* window);
 void CleanupLeaderBoard(LeaderBoard* l);
+
+bool LeaderBoardScroll(SDL_Event* e, void* data);
+bool LeaderBoardKeyDown(SDL_Event* e, void* data);
+bool LeaderBoardMouseDown(SDL_Event* e, void* data);
+
+void DispatchLeaderBoardEvents(EventDispatcher_t* ev, LeaderBoard* l);
 
 void SaveScoreToLeaderBoard(Score score);
 void DeleteLeaderBoard();
+
+void RenderLeaderBoard(LeaderBoard* l, Renderer2D* renderer);
